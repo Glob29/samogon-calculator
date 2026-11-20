@@ -602,3 +602,11 @@ footer {
 .donate-alt[open] summary { margin-bottom: 8px; }
 .donate-alt ul { margin: 8px 0; }
 .donate-alt code { font-size: .84em; }
+
+
+.donate-sub {
+  margin: 18px 0 6px;
+  font-size: .85rem;
+  color: var(--muted);
+  font-weight: 600;
+}
