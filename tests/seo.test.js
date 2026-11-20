@@ -15,7 +15,7 @@ const LANGS = [
   {
     code: 'en',
     dir: 'en',
-    files: ['content/seo-pages.en.js', 'content/seo-pages.en.more.js'],
+    files: ['content/seo-pages.en.js', 'content/seo-pages.en.more.js', 'content/seo-pages.en.laws.js'],
     htmlLang: 'en'
   }
 ];
@@ -95,10 +95,10 @@ check('базовые темы имеют русскую и английскую
 });
 check('одноязычные страницы тоже допустимы', () => {
   const single = Object.keys(byId).filter((id) => byId[id].length === 1);
-  assert(single.length === 12, 'одноязычных: ' + single.length);
+  assert(single.length === 15, 'одноязычных: ' + single.length);
 });
-check('всего страниц: 7 русских + 13 английских', () => {
-  assert(entries.length === 20, 'страниц: ' + entries.length);
+check('всего страниц: 7 русских + 16 английских', () => {
+  assert(entries.length === 23, 'страниц: ' + entries.length);
 });
 
 console.log('\nПосадочные страницы');

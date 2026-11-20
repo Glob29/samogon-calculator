@@ -21,7 +21,7 @@ const LANGS = [
   {
     code: 'en',
     dir: 'en',
-    files: ['content/seo-pages.en.js', 'content/seo-pages.en.more.js'],
+    files: ['content/seo-pages.en.js', 'content/seo-pages.en.more.js', 'content/seo-pages.en.laws.js'],
     label: 'English',
     htmlLang: 'en'
   }
