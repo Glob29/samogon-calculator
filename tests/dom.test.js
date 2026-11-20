@@ -199,6 +199,24 @@ check('открывается на английском и с предзапол
   enDom.window.close();
 });
 
+console.log('\nСсылка с языком и вкладкой');
+check('?lang=de&tab=fractions открывает немецкий и нужную вкладку', () => {
+  const html2 = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
+    .replace(/<script src="[^"]+"><\/script>\s*/g, '');
+  const d2 = new JSDOM(html2, {
+    url: 'https://samogon.local/?lang=de&tab=fractions',
+    runScripts: 'outside-only',
+    pretendToBeVisual: true,
+    virtualConsole
+  });
+  sources.forEach((src) => d2.window.eval(src));
+  const doc2 = d2.window.document;
+  assert(doc2.getElementById('lang-select').value === 'de', 'язык: ' + doc2.getElementById('lang-select').value);
+  assert(doc2.getElementById('tab-fractions').classList.contains('is-active'), 'открыта не та вкладка');
+  assert(doc2.querySelector('h1').textContent === dict('de')['app.title'], 'заголовок не на немецком');
+  d2.window.close();
+});
+
 console.log('\nТабы');
 check('переключение на «Брага»', () => {
   doc.querySelector('.tab[data-tab="mash"]').dispatchEvent(new win.Event('click', { bubbles: true }));

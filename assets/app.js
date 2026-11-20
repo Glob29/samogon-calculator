@@ -21,6 +21,15 @@
     if (seoLang) lang = seoLang;
   }
 
+  // ?lang=de — явный выбор языка в ссылке важнее сохранённого
+  try {
+    var urlLang = new URLSearchParams(location.search).get('lang');
+    if (urlLang && LANGS.indexOf(urlLang) >= 0) {
+      lang = urlLang;
+      localStorage.setItem(LANG_KEY, lang);
+    }
+  } catch (e) { /* ссылка без параметров */ }
+
   var nf, nf1, nf3;
 
   function setFormatters() {
