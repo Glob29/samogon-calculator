@@ -13,7 +13,9 @@
 
 from __future__ import annotations
 
+import io
 import math
+import struct
 from pathlib import Path
 
 from PIL import Image, ImageDraw
@@ -213,10 +215,55 @@ def svg() -> str:
     )
 
 
+def _bmp_frame(img):
+    """Кадр ICO в формате DIB (BITMAPINFOHEADER + XOR + AND) — его понимает любой проводник."""
+    w, h = img.size
+    px = img.convert("RGBA").load()
+
+    xor = bytearray()
+    for y in range(h - 1, -1, -1):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            xor += bytes((b, g, r, a))
+
+    row_bytes = ((w + 31) // 32) * 4
+    and_mask = bytearray()
+    for y in range(h - 1, -1, -1):
+        row = bytearray(row_bytes)
+        for x in range(w):
+            if px[x, y][3] == 0:
+                row[x // 8] |= 0x80 >> (x % 8)
+        and_mask += row
+
+    header = struct.pack("<IiiHHIIiiII", 40, w, h * 2, 1, 32, 0,
+                         len(xor) + len(and_mask), 0, 0, 0, 0)
+    return bytes(header) + bytes(xor) + bytes(and_mask)
+
+
 def save_ico(sizes=(16, 24, 32, 48, 64, 128, 256)):
-    """ICO с PNG-сжатыми кадрами (Windows Vista+)."""
+    """
+    Гибридный ICO: мелкие кадры — DIB (максимальная совместимость),
+    крупные — PNG (меньше вес). Проводник Windows понимает оба формата.
+    """
+    frames = []
+    for size in sizes:
+        img = render_png(size)
+        if size <= 64:
+            data = _bmp_frame(img)
+        else:
+            buf = io.BytesIO()
+            img.save(buf, format="PNG", optimize=True)
+            data = buf.getvalue()
+        frames.append((size, data))
+
     out = ASSETS / "icon.ico"
-    render_png(256).save(out, format="ICO", sizes=[(s, s) for s in sizes])
+    offset = 6 + 16 * len(frames)
+    entries, blob = b"", b""
+    for size, data in frames:
+        entries += struct.pack("<BBBBHHII", size % 256, size % 256, 0, 0, 1, 32,
+                               len(data), offset + len(blob))
+        blob += data
+    out.write_bytes(struct.pack("<HHH", 0, 1, len(frames)) + entries + blob)
     return out
 
 
