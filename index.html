@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Калькулятор самогонщика — разбавление спирта, брага, сроки брожения</title>
+<meta name="description" content="Калькулятор для домашнего винокурения: разбавление спирта водой с учётом контракции, расчёт сахаристости и крепости браги, ориентировочные сроки брожения.">
+<meta name="theme-color" content="#0d0f13">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23f0a83c'/%3E%3Cpath d='M10 5h4M10.5 5v4.2L7.8 15a2 2 0 0 0 1.7 3h5a2 2 0 0 0 1.7-3l-2.7-5.8V5' stroke='%231a1206' stroke-width='1.6' fill='none' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1a1206" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 3h6"/>
+          <path d="M10 3v5.2a5 5 0 0 0-.7 1.1L5.7 17a3 3 0 0 0 2.6 4.5h7.4a3 3 0 0 0 2.6-4.5l-3.6-7.7a5 5 0 0 0-.7-1.1V3"/>
+          <path d="M7.5 15h9"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Калькулятор самогонщика</h1>
+        <p class="sub">Разбавление · сахаристость браги · сроки брожения</p>
+      </div>
+    </div>
+    <span class="badge-18">18+</span>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab is-active" role="tab" data-tab="dilute">Разбавление</button>
+    <button class="tab" role="tab" data-tab="mash">Брага</button>
+    <button class="tab" role="tab" data-tab="time">Сроки брожения</button>
+    <button class="tab" role="tab" data-tab="about">Формулы</button>
+  </nav>
+
+  <main>
+
+    <!-- ================= РАЗБАВЛЕНИЕ ================= -->
+    <section class="panel is-active" id="tab-dilute" role="tabpanel">
+      <div class="card">
+        <h2>Разбавление спирта водой <span class="hint">учёт контракции</span></h2>
+
+        <div class="grid">
+          <div class="field">
+            <label for="d-vol-pct">Крепость исходная, <span class="unit">% об.</span></label>
+            <input type="number" id="d-vol-pct" value="90" min="0.1" max="100" step="0.1" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="d-volume">Объём исходный, <span class="unit">л</span></label>
+            <input type="number" id="d-volume" value="1" min="0.01" step="0.01" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="d-target">Крепость желаемая, <span class="unit">% об.</span></label>
+            <input type="number" id="d-target" value="40" min="0.1" max="100" step="0.1" inputmode="decimal">
+          </div>
+        </div>
+
+        <div class="presets" id="d-presets">
+          <button class="chip" data-v="90" data-o="1" data-t="40">Спирт 90 % → 40 %</button>
+          <button class="chip" data-v="96" data-o="1" data-t="40">Спирт 96 % → 40 %</button>
+          <button class="chip" data-v="70" data-o="3" data-t="40">Самогон 70 % → 40 %</button>
+          <button class="chip" data-v="65" data-o="5" data-t="20">Перед 2-й перегонкой 65 % → 20 %</button>
+        </div>
+
+        <div class="result">
+          <div class="big">
+            <div class="label">Долить воды</div>
+            <div class="value" id="d-water">—<small>л</small></div>
+            <div class="note" id="d-water-note">&nbsp;</div>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="k">Итоговый объём</div><div class="v" id="d-final">—</div></div>
+            <div class="stat"><div class="k">По простой формуле</div><div class="v" id="d-simple">—</div></div>
+            <div class="stat"><div class="k">Безводного спирта</div><div class="v" id="d-ethanol">—</div></div>
+            <div class="stat"><div class="k">Сжатие смеси</div><div class="v" id="d-contraction">—</div></div>
+          </div>
+        </div>
+
+        <div class="notes" id="d-notes"></div>
+      </div>
+    </section>
+
+    <!-- ================= БРАГА ================= -->
+    <section class="panel" id="tab-mash" role="tabpanel">
+      <div class="card">
+        <h2>Сахарная брага <span class="hint">сахаристость и выход</span></h2>
+
+        <div class="grid">
+          <div class="field">
+            <label for="m-sugar">Сахар, <span class="unit">кг</span></label>
+            <input type="number" id="m-sugar" value="5" min="0.1" step="0.1" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="m-water">Вода, <span class="unit">л</span></label>
+            <input type="number" id="m-water" value="20" min="0.1" step="0.5" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="m-yeast">Дрожжи</label>
+            <select id="m-yeast">
+              <option value="spirit" selected>Спиртовые (сухие)</option>
+              <option value="bakery">Хлебопекарные</option>
+              <option value="turbo">Турбо</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="m-temp">Температура, <span class="unit">°C</span></label>
+            <input type="number" id="m-temp" value="25" min="5" max="40" step="1" inputmode="numeric">
+          </div>
+        </div>
+
+        <div class="result">
+          <div class="big">
+            <div class="label">Выход самогона 40 %</div>
+            <div class="value" id="m-spirit40">—<small>л</small></div>
+            <div class="note" id="m-spirit-note">&nbsp;</div>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="k">Гидромодуль</div><div class="v" id="m-hydro">—</div></div>
+            <div class="stat"><div class="k">Сахаристость сусла</div><div class="v" id="m-sugarpct">—</div></div>
+            <div class="stat"><div class="k">Крепость браги</div><div class="v" id="m-abv">—</div></div>
+            <div class="stat"><div class="k">Объём браги</div><div class="v" id="m-volume">—</div></div>
+            <div class="stat"><div class="k">Абсолютного спирта</div><div class="v" id="m-alcohol">—</div></div>
+            <div class="stat"><div class="k">Срок брожения</div><div class="v" id="m-days">—</div></div>
+          </div>
+        </div>
+
+        <div class="notes" id="m-notes"></div>
+      </div>
+    </section>
+
+    <!-- ================= СРОКИ ================= -->
+    <section class="panel" id="tab-time" role="tabpanel">
+      <div class="card">
+        <h2>Ориентировочные сроки брожения</h2>
+
+        <div class="grid">
+          <div class="field">
+            <label for="t-yeast">Сырьё и дрожжи</label>
+            <select id="t-yeast">
+              <option value="bakery">Сахарная, хлебопекарные дрожжи</option>
+              <option value="spirit" selected>Сахарная, спиртовые дрожжи</option>
+              <option value="turbo">Сахарная, турбо-дрожжи</option>
+              <option value="grain">Зерновая (с осахариванием)</option>
+              <option value="fruit">Фруктовая / ягодная (дикие дрожжи)</option>
+              <option value="starch">Крахмальная (картофель)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="t-temp">Температура в помещении, <span class="unit">°C</span></label>
+            <input type="number" id="t-temp" value="25" min="10" max="40" step="1" inputmode="numeric">
+          </div>
+        </div>
+
+        <div class="result">
+          <div class="big">
+            <div class="label">Ожидаемый срок</div>
+            <div class="value" id="t-range">—<small>дней</small></div>
+            <div class="note" id="t-note">&nbsp;</div>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="k">Температурный коэффициент</div><div class="v" id="t-factor">—</div></div>
+            <div class="stat"><div class="k">Оптимум</div><div class="v">22–28 °C</div></div>
+          </div>
+        </div>
+
+        <div class="notes" id="t-notes"></div>
+      </div>
+
+      <div class="card">
+        <h2>Сравнение по сырью <span class="hint">при текущей температуре</span></h2>
+        <table>
+          <thead>
+            <tr><th>Сырьё</th><th>Срок, дней</th><th>Комментарий</th></tr>
+          </thead>
+          <tbody id="t-table"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= ФОРМУЛЫ ================= -->
+    <section class="panel" id="tab-about" role="tabpanel">
+      <div class="card">
+        <h2>Как считает калькулятор</h2>
+        <div class="prose">
+          <p><strong>Разбавление.</strong> Считается баланс массы спирта: масса безводного этанола до смешивания равна массе после. Крепости переводятся из объёмных долей в массовые через табличные плотности водно-спиртовых растворов при 20 °C. Такой расчёт автоматически учитывает <em>контракцию</em> — сжатие смеси, из-за которого 1 л спирта и 1 л воды дают меньше 2 л жидкости.</p>
+          <p>Для сравнения показывается и «простая» формула, которой пользуется большинство онлайн-калькуляторов:</p>
+          <p><code>Vводы = V · (C₁ / C₂ − 1)</code></p>
+          <p>Она не учитывает контракцию и на крепких растворах занижает объём воды на 3–5 %.</p>
+
+          <p><strong>Брага.</strong> Приняты практические коэффициенты домашнего винокурения:</p>
+          <ul>
+            <li>1 кг сахарозы → ≈ 0,6 л абсолютного спирта (теоретический максимум 0,68 л);</li>
+            <li>1 кг растворённого сахара добавляет ≈ 0,6 л объёма;</li>
+            <li>крепость браги ≈ 0,6 × сахаристость сусла, % масс.</li>
+          </ul>
+          <p>Сахаристость считается как отношение массы сахара к массе сахара и воды. Оптимальный гидромодуль — 1:4…1:5.</p>
+
+          <p><strong>Сроки брожения.</strong> Базовые диапазоны по сырью умножаются на температурный коэффициент: ниже 16 °C — ×1,8, 16–19 °C — ×1,45, 19–22 °C — ×1,2, 22–26 °C — ×1,0, 26–29 °C — ×0,85, выше 30 °C — ×0,7. Цифры ориентировочные: готовность определяют по прекращению газовыделения, осветлению и горькому вкусу без сладости, а точнее всего — ареометром (0–1,5 % сахара).</p>
+
+          <p><strong>Точность.</strong> Плотности взяты из табличных данных для 20 °C с шагом 5 % масс. и линейной интерполяцией между точками — погрешность порядка ±1 %. Показания ареометра вне 20 °C нужно приводить к 20 °C, иначе ошибка дойдёт до 2–3 градусов.</p>
+
+          <p><strong>Источники.</strong> Таблицы плотности водно-спиртовых растворов — <a href="https://en.wikipedia.org/wiki/Ethanol_(data_page)" rel="noopener">Ethanol data page</a> (по Lange, 1967); практические коэффициенты выхода и сроки — обзоры по домашнему винокурению <a href="https://tltbeer.ru/samogon/articles/k/ka/kak-razbavit-samogon-kalkulyator-samogonshchika-onlajn-raschet.html" rel="noopener">о разбавлении</a> и <a href="https://tltbeer.ru/samogon/articles/s/sk/skolko-sakhara-nuzhno-dlya-bragi-na-samogon.html" rel="noopener">о расчёте сахара</a>.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Безопасность</h2>
+        <div class="prose">
+          <ul>
+            <li>Спирт всегда вливают в воду, а не наоборот — иначе смесь мутнеет.</li>
+            <li>Не перегоняйте спирт-сырец крепче 40 %: высокая концентрация паров в кубе пожароопасна. Перед второй перегонкой разбавляют до 20–30 %.</li>
+            <li>Первые порции дистиллята («головы») содержат метанол и альдегиды — их отбирают и не употребляют.</li>
+            <li>Самогоноварение регулируется законом; ответственность за соблюдение местных норм — на вас.</li>
+            <li>Алкоголь вредит здоровью. Калькулятор — расчётный инструмент, а не приглашение к употреблению.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    Калькулятор самогонщика · работает офлайн, данные никуда не отправляются<br>
+    Расчёты ориентировочные: проверяйте крепость ареометром при 20 °C
+    <div class="disclaimer">18+ · Чрезмерное употребление алкоголя вредит вашему здоровью.</div>
+  </footer>
+
+</div>
+
+<script src="assets/calc.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
