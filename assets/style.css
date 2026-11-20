@@ -581,3 +581,24 @@ footer {
   filter: grayscale(.3);
   pointer-events: none;
 }
+
+
+/* альтернативные способы доната */
+.donate-alt {
+  margin: 16px 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #12161c;
+}
+
+.donate-alt summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text);
+  font-size: .9rem;
+}
+
+.donate-alt[open] summary { margin-bottom: 8px; }
+.donate-alt ul { margin: 8px 0; }
+.donate-alt code { font-size: .84em; }
