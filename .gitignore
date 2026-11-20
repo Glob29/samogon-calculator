@@ -10,3 +10,7 @@ __pycache__/
 *.pyc
 dist/
 
+
+# машинно-зависимый ярлык: создаётся tools/install-shortcut.ps1
+*.lnk
+
