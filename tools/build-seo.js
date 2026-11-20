@@ -17,19 +17,27 @@ const BASE = 'https://glob29.github.io/samogon-calculator/';
 const shellRaw = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
 const LANGS = [
-  { code: 'ru', dir: '', file: 'content/seo-pages.js', label: 'Русский', htmlLang: 'ru' },
-  { code: 'en', dir: 'en', file: 'content/seo-pages.en.js', label: 'English', htmlLang: 'en' }
+  { code: 'ru', dir: '', files: ['content/seo-pages.js'], label: 'Русский', htmlLang: 'ru' },
+  {
+    code: 'en',
+    dir: 'en',
+    files: ['content/seo-pages.en.js', 'content/seo-pages.en.more.js'],
+    label: 'English',
+    htmlLang: 'en'
+  }
 ];
 
 const entries = [];
 LANGS.forEach(function (lang) {
-  const file = path.join(root, lang.file);
-  if (!fs.existsSync(file)) return;
-  require(file).forEach(function (page) {
-    entries.push({
-      lang: lang,
-      page: page,
-      id: page.id || page.slug
+  (lang.files || []).forEach(function (file) {
+    const full = path.join(root, file);
+    if (!fs.existsSync(full)) return;
+    require(full).forEach(function (page) {
+      entries.push({
+        lang: lang,
+        page: page,
+        id: page.id || page.slug
+      });
     });
   });
 });
@@ -134,7 +142,8 @@ function headExtra(entry) {
     blocks.push('<link rel="alternate" hreflang="' + a.hreflang + '" href="' + a.url + '">');
   });
   const ruEntry = groups[entry.id].filter(function (x) { return x.lang.code === 'ru'; })[0];
-  if (ruEntry) blocks.push('<link rel="alternate" hreflang="x-default" href="' + urlFor(ruEntry) + '">');
+  const fallback = ruEntry || groups[entry.id][0];
+  if (fallback) blocks.push('<link rel="alternate" hreflang="x-default" href="' + urlFor(fallback) + '">');
 
   blocks.push(
     '<meta property="og:type" content="article">',

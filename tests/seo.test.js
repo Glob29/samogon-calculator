@@ -11,15 +11,22 @@ const root = path.join(__dirname, '..');
 const BASE = 'https://glob29.github.io/samogon-calculator/';
 
 const LANGS = [
-  { code: 'ru', dir: '', file: 'content/seo-pages.js', htmlLang: 'ru' },
-  { code: 'en', dir: 'en', file: 'content/seo-pages.en.js', htmlLang: 'en' }
+  { code: 'ru', dir: '', files: ['content/seo-pages.js'], htmlLang: 'ru' },
+  {
+    code: 'en',
+    dir: 'en',
+    files: ['content/seo-pages.en.js', 'content/seo-pages.en.more.js'],
+    htmlLang: 'en'
+  }
 ];
 
 const entries = [];
 LANGS.forEach((lang) => {
-  const file = path.join(root, lang.file);
-  if (!fs.existsSync(file)) return;
-  require(file).forEach((page) => entries.push({ lang, page, id: page.id || page.slug }));
+  lang.files.forEach((rel) => {
+    const file = path.join(root, rel);
+    if (!fs.existsSync(file)) return;
+    require(file).forEach((page) => entries.push({ lang, page, id: page.id || page.slug }));
+  });
 });
 
 const byId = {};
@@ -78,15 +85,21 @@ check('canonical на главной', () => {
 });
 
 console.log('\nГруппы переводов');
-check('у каждой страницы есть пара на другом языке', () => {
-  Object.keys(byId).forEach((id) => {
-    const group = byId[id];
-    const langs = group.map((e) => e.lang.code).sort().join(',');
-    assert(langs === 'en,ru', id + ': переводы ' + langs);
+check('русские темы имеют английскую пару', () => {
+  const ruEntries = entries.filter((e) => e.lang.code === 'ru');
+  assert(ruEntries.length === 4, 'русских страниц: ' + ruEntries.length);
+  ruEntries.forEach((e) => {
+    const group = byId[e.id] || [];
+    const langs = group.map((x) => x.lang.code).sort().join(',');
+    assert(langs === 'en,ru', e.id + ': переводы ' + langs);
   });
 });
-check('всего 8 страниц (4 темы × 2 языка)', () => {
-  assert(entries.length === 8, 'страниц: ' + entries.length);
+check('английские страницы без пары допустимы', () => {
+  const onlyEn = Object.keys(byId).filter((id) => byId[id].length === 1 && byId[id][0].lang.code === 'en');
+  assert(onlyEn.length >= 8, 'английских страниц без пары: ' + onlyEn.length);
+});
+check('всего страниц: 4 русских + 13 английских', () => {
+  assert(entries.length === 17, 'страниц: ' + entries.length);
 });
 
 console.log('\nПосадочные страницы');
