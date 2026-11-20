@@ -5,7 +5,7 @@
  * ВАЖНО: при обновлении файлов приложения поднимайте версию кеша ниже,
  * иначе браузер продолжит отдавать старую копию.
  */
-const CACHE = 'samogon-v1';
+const CACHE = 'samogon-v2';
 const PRECACHE = [
   './',
   './index.html',
@@ -13,6 +13,8 @@ const PRECACHE = [
   './assets/style.css',
   './assets/calc.js',
   './assets/i18n.js',
+  './assets/i18n.de.js',
+  './assets/i18n.es.js',
   './assets/app.js',
   './assets/analytics.js',
   './assets/icon.svg',

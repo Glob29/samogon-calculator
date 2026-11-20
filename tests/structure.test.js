@@ -13,7 +13,10 @@ const vm = require('vm');
 const root = path.join(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const appJs = fs.readFileSync(path.join(root, 'assets', 'app.js'), 'utf8');
-const i18nSrc = fs.readFileSync(path.join(root, 'assets', 'i18n.js'), 'utf8');
+const i18nFiles = ['i18n.js', 'i18n.de.js', 'i18n.es.js']
+  .map((f) => path.join(root, 'assets', f))
+  .filter((f) => fs.existsSync(f));
+const i18nSrc = i18nFiles.map((f) => fs.readFileSync(f, 'utf8')).join('\n;\n');
 
 let failed = 0;
 function check(name, fn) {
@@ -42,8 +45,10 @@ check('style.css существует', () => {
 check('calc.js существует', () => {
   assert(fs.existsSync(path.join(root, 'assets', 'calc.js')), 'нет calc.js');
 });
-check('i18n.js существует и содержит три языка', () => {
-  assert(I18N && I18N.ru && I18N.en && I18N.zh, 'ожидались ru/en/zh, получено: ' + LANGS.join(', '));
+check('i18n.js существует и содержит пять языков', () => {
+  const need = ['ru', 'en', 'zh', 'de', 'es'];
+  assert(I18N, 'нет I18N');
+  need.forEach((l) => assert(I18N[l], 'нет языка ' + l));
 });
 check('все скрипты из HTML существуют', () => {
   for (const m of html.matchAll(/<script src="([^"]+)"/g)) {

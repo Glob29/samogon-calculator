@@ -17,13 +17,24 @@ const BASE = 'https://glob29.github.io/samogon-calculator/';
 const shellRaw = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 
 const LANGS = [
-  { code: 'ru', dir: '', files: ['content/seo-pages.js'], label: 'Русский', htmlLang: 'ru' },
+  { code: 'ru', dir: '', files: ['content/seo-pages.js'], label: 'Русский', htmlLang: 'ru', brand: 'Калькулятор самогонщика', faq: 'Частые вопросы' },
   {
     code: 'en',
     dir: 'en',
     files: ['content/seo-pages.en.js', 'content/seo-pages.en.more.js', 'content/seo-pages.en.laws.js'],
     label: 'English',
-    htmlLang: 'en'
+    htmlLang: 'en',
+    brand: 'Moonshiner’s Calculator',
+    faq: 'FAQ'
+  },
+  {
+    code: 'de',
+    dir: 'de',
+    files: ['content/seo-pages.de.js'],
+    label: 'Deutsch',
+    htmlLang: 'de',
+    brand: 'Schnapsbrenner-Rechner',
+    faq: 'Häufige Fragen'
   }
 ];
 
@@ -112,7 +123,7 @@ function introBlock(entry) {
   ].join('\n');
 }
 
-function outroBlock(page) {
+function outroBlock(page, entry) {
   const sections = page.sections.map(function (s) {
     return '    <h2>' + esc(s.h2) + '</h2>\n    ' + s.html;
   }).join('\n\n');
@@ -125,7 +136,7 @@ function outroBlock(page) {
     '  <article class="seo-article seo-article--outro">',
     sections,
     '',
-    '    <h2>' + (page.lang === 'en' ? 'FAQ' : 'Частые вопросы') + '</h2>',
+    '    <h2>' + (entry.lang.faq || 'FAQ') + '</h2>',
     faq,
     '  </article>',
     ''
@@ -151,8 +162,8 @@ function headExtra(entry) {
     '<meta property="og:description" content="' + esc(page.description) + '">',
     '<meta property="og:url" content="' + urlFor(entry) + '">',
     '<meta property="og:image" content="' + BASE + 'assets/icon-512.png">',
-    '<meta property="og:site_name" content="Samogon Calculator">',
-    '<meta property="og:locale" content="' + (page.lang === 'en' ? 'en_US' : 'ru_RU') + '">',
+    '<meta property="og:site_name" content="' + esc(entry.lang.brand) + '">',
+    '<meta property="og:locale" content="' + ({ ru: 'ru_RU', en: 'en_US', de: 'de_DE', es: 'es_ES' }[entry.lang.code] || 'ru_RU') + '">',
     '<script type="application/ld+json">' + JSON.stringify(jsonLd(page)) + '</script>'
   );
 
@@ -193,11 +204,11 @@ entries.forEach(function (entry) {
 
   html = html.replace(
     /<h1 data-i18n="app.title">[^<]*<\/h1>/,
-    '<a class="brand-title" href="' + (prefix || './') + '" data-i18n="app.title">Калькулятор самогонщика</a>'
+    '<a class="brand-title" href="' + (prefix || './') + '" data-i18n="app.title">' + esc(entry.lang.brand) + '</a>'
   );
 
   html = html.replace('<nav class="tabs"', introBlock(entry) + '  <nav class="tabs"');
-  html = html.replace('  </main>', outroBlock(page) + '  </main>');
+  html = html.replace('  </main>', outroBlock(page, entry) + '  </main>');
 
   const langScript = entry.lang.code === 'ru' ? '' :
     '<script>window.SEO_LANG = ' + JSON.stringify(entry.lang.code) + ';</script>\n';

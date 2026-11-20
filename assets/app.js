@@ -7,8 +7,8 @@
 
   var $ = function (id) { return document.getElementById(id); };
 
-  var LANGS = ['ru', 'en', 'zh'];
-  var LOCALES = { ru: 'ru-RU', en: 'en-US', zh: 'zh-CN' };
+  var LANGS = ['ru', 'en', 'zh', 'de', 'es'];
+  var LOCALES = { ru: 'ru-RU', en: 'en-US', zh: 'zh-CN', de: 'de-DE', es: 'es-ES' };
   var LANG_KEY = 'samogon.lang';
 
   var lang = 'ru';

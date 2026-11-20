@@ -28,7 +28,7 @@ function assert(cond, msg) { if (!cond) throw new Error(msg); }
 
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
   .replace(/<script src="[^"]+"><\/script>\s*/g, '');
-const sources = ['i18n.js', 'calc.js', 'app.js']
+const sources = ['i18n.js', 'i18n.de.js', 'i18n.es.js', 'calc.js', 'app.js']
   .map((f) => fs.readFileSync(path.join(root, 'assets', f), 'utf8'));
 
 const virtualConsole = new VirtualConsole();
@@ -149,6 +149,19 @@ check('формулы переводятся вместе с интерфейс�
   assert(about.includes('Dilution'), 'нет английского текста формул');
   selectLang('zh');
   assert(doc.querySelector('[data-i18n-html="about.body"]').innerHTML.includes('稀释'), 'нет китайского текста формул');
+});
+check('переключение на немецкий', () => {
+  selectLang('de');
+  assert(doc.documentElement.lang === 'de', 'lang=' + doc.documentElement.lang);
+  assert(doc.querySelector('h1').textContent === dict('de')['app.title'], 'заголовок');
+  assert(text('d-water').indexOf('1,3') === 0, 'число: ' + text('d-water'));
+  assert(doc.querySelector('.tab[data-tab="thermo"] span').textContent === dict('de')['tab.thermo'], 'таб');
+});
+check('переключение на испанский', () => {
+  selectLang('es');
+  assert(doc.documentElement.lang === 'es', 'lang=' + doc.documentElement.lang);
+  assert(doc.querySelector('h1').textContent === dict('es')['app.title'], 'заголовок');
+  assert(text('d-water').indexOf('1,3') === 0, 'число: ' + text('d-water'));
 });
 check('возврат на русский сохраняет формат чисел', () => {
   selectLang('ru');
