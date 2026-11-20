@@ -46,6 +46,10 @@
       <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 5h17l-6.2 7.3v6.2l-4.6 2.3v-8.5z"/></svg>
       <span>Фракции</span>
     </button>
+    <button class="tab" role="tab" data-tab="thermo">
+      <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13.8V5.2a2 2 0 1 1 4 0v8.6a4 4 0 1 1-4 0z"/><path d="M12 9.5v6.5"/></svg>
+      <span>Ареометр</span>
+    </button>
     <button class="tab" role="tab" data-tab="time">
       <svg class="ti" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
       <span>Сроки</span>
@@ -262,6 +266,50 @@
       </div>
     </section>
 
+    <!-- ================= АРЕОМЕТР ================= -->
+    <section class="panel" id="tab-thermo" role="tabpanel">
+      <div class="card">
+        <h2>Поправка на температуру <span class="hint">спиртомер АСП-3</span></h2>
+
+        <div class="grid">
+          <div class="field">
+            <label for="th-pct">Показание спиртомера, <span class="unit">% об.</span></label>
+            <input type="number" id="th-pct" value="40" min="0.1" max="100" step="0.1" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="th-temp">Температура раствора, <span class="unit">°C</span></label>
+            <input type="number" id="th-temp" value="25" min="-5" max="45" step="0.5" inputmode="decimal">
+          </div>
+        </div>
+
+        <div class="result">
+          <div class="big">
+            <div class="label">Истинная крепость при 20 °C</div>
+            <div class="value" id="th-true">—<small>%</small></div>
+            <div class="note" id="th-note">&nbsp;</div>
+          </div>
+          <div class="stats">
+            <div class="stat"><div class="k">Поправка</div><div class="v" id="th-corr">—</div></div>
+            <div class="stat"><div class="k">Плотность при 20 °C</div><div class="v" id="th-density">—</div></div>
+            <div class="stat"><div class="k">Коэффициент</div><div class="v" id="th-coeff">—</div></div>
+            <div class="stat"><div class="k">Отклонение от 20 °C</div><div class="v" id="th-delta">—</div></div>
+          </div>
+        </div>
+
+        <div class="notes" id="th-notes"></div>
+      </div>
+
+      <div class="card">
+        <h2>Таблица поправок <span class="hint">для показания <span id="th-table-pct">40</span> % об.</span></h2>
+        <table>
+          <thead>
+            <tr><th>Температура</th><th>Истинная крепость</th><th>Поправка</th></tr>
+          </thead>
+          <tbody id="th-table"></tbody>
+        </table>
+      </div>
+    </section>
+
     <!-- ================= СРОКИ ================= -->
     <section class="panel" id="tab-time" role="tabpanel">
       <div class="card">
@@ -334,6 +382,10 @@
           <p>В ходе брожения спирт искажает коэффициент преломления, и «сырой» текущий Brix занижает остаток сахара. Поэтому текущая плотность считается по паре замеров (начальный и текущий Brix) с поправкой Террилла, а остаточный сахар оценивается как <code>(SG − 1) · 2600</code> г/л.</p>
 
           <p><strong>Фракции.</strong> Всё считается от абсолютного спирта: <code>АС = V · C</code>. Доли голов и хвостов задаются в процентах от АС, остаток — тело. Объёмы жидкости получаются делением АС фракции на её типичную крепость: головы 78 %, тело 70 %, хвосты 25 %. Это ориентир — на конкретном аппарате значения сдвигаются.</p>
+
+          <p><strong>Ареометр и температура.</strong> Спиртомер калиброван на 20 °C. В тёплом растворе плотность ниже, ареометр тонет глубже и показывает завышенную крепость. Истинная крепость ищется из условия, что плотность раствора при температуре замера равна плотности раствора с показанием <code>r</code> при 20 °C:</p>
+          <p><code>ρ₂₀(c) · (1 − α(c)·(T − 20)) = ρ₂₀(r)</code></p>
+          <p>где <code>α</code> — коэффициент объёмного расширения (0,00021 у воды, 0,00093 при 40 % об., 0,00116 при 96 % об.). Дальше — бисекция. Погрешность порядка ±0,5°; точные таблицы — ГОСТ 8.315.</p>
 
           <p><strong>Сроки брожения.</strong> Базовые диапазоны по сырью умножаются на температурный коэффициент: ниже 16 °C — ×1,8, 16–19 °C — ×1,45, 19–22 °C — ×1,2, 22–26 °C — ×1,0, 26–29 °C — ×0,85, выше 30 °C — ×0,7. Цифры ориентировочные: готовность определяют по прекращению газовыделения, осветлению и горькому вкусу без сладости, а точнее всего — ареометром (0–1,5 % сахара).</p>
 

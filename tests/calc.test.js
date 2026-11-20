@@ -194,6 +194,44 @@ check('сумма голов и хвостов ≥ 100 % — ошибка', () =
   assert.ok(Calc.fractions(10, 40, 60, 50).ok === false, 'должна быть ошибка');
 });
 
+console.log('\nПоправка на температуру');
+check('при 20 °C поправки нет', () => {
+  const r = Calc.correctTo20(40, 20);
+  near(r.truePct, 40, 0.001, 'крепость');
+  near(r.correction, 0, 0.001, 'поправка');
+});
+check('40 % при 25 °C → ≈37,3 %', () => {
+  const r = Calc.correctTo20(40, 25);
+  near(r.truePct, 37.28, 0.3, 'крепость');
+  assert.ok(r.correction < 0, 'поправка должна быть отрицательной');
+});
+check('40 % при 30 °C → ≈34,5 %', () => {
+  const r = Calc.correctTo20(40, 30);
+  near(r.truePct, 34.54, 0.4, 'крепость');
+});
+check('40 % при 15 °C → ≈42,8 %', () => {
+  const r = Calc.correctTo20(40, 15);
+  near(r.truePct, 42.77, 0.4, 'крепость');
+  assert.ok(r.correction > 0, 'поправка должна быть положительной');
+});
+check('чем теплее, тем ниже истинная крепость', () => {
+  const cold = Calc.correctTo20(40, 10).truePct;
+  const norm = Calc.correctTo20(40, 20).truePct;
+  const warm = Calc.correctTo20(40, 30).truePct;
+  assert.ok(cold > norm && norm > warm, `${cold} > ${norm} > ${warm}`);
+});
+check('скорость поправки ≈ 0,5 %/°C', () => {
+  const r = Calc.correctTo20(40, 25);
+  near(Math.abs(r.ratePerC), 0.54, 0.05, 'скорость');
+});
+check('96 % при 25 °C → ≈94,8 %', () => {
+  near(Calc.correctTo20(96, 25).truePct, 94.79, 0.4, 'крепость');
+});
+check('крепость 0 или температура 60 — ошибка', () => {
+  assert.ok(Calc.correctTo20(0, 25).ok === false, '0 % должен быть ошибкой');
+  assert.ok(Calc.correctTo20(40, 60).ok === false, '60 °C должен быть ошибкой');
+});
+
 console.log('');
 if (failures.length) {
   console.log('Провалено: ' + failures.length + ' из ' + (passed + failures.length));

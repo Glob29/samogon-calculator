@@ -137,6 +137,20 @@ function assert(cond, msg) {
     assert(text('f-heads-ml').indexOf('820') === 0, 'получено: ' + text('f-heads-ml'));
   });
 
+  console.log('\nАреометр');
+  expect('40 % при 25 °C → 37,3 %, поправка отрицательная', () => {
+    assert(text('th-true').indexOf('37,3') === 0, 'крепость: ' + text('th-true'));
+    assert(text('th-corr').indexOf('-2,7') === 0, 'поправка: ' + text('th-corr'));
+  });
+  expect('таблица поправок на 7 температур', () => {
+    assert(doc.querySelectorAll('#th-table tr').length === 7, 'строк: ' + doc.querySelectorAll('#th-table tr').length);
+  });
+  expect('при 20 °C поправка нулевая', () => {
+    input('th-temp', 20);
+    assert(text('th-true').indexOf('40') === 0, 'крепость: ' + text('th-true'));
+    assert(text('th-note').indexOf('не нужна') >= 0, 'подпись: ' + text('th-note'));
+  });
+
   console.log('\nСроки');
   expect('таблица по 6 видам сырья', () => {
     const rows = doc.querySelectorAll('#t-table tr');

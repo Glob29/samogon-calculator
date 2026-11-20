@@ -303,6 +303,72 @@
     if (el) el.addEventListener('input', renderFractions);
   });
 
+  /* ----------------------------- ареометр ----------------------------- */
+
+  var THERMO_TEMPS = [5, 10, 15, 20, 25, 30, 35];
+
+  function renderThermo() {
+    var pct = readNumber($('th-pct'));
+    var tempC = readNumber($('th-temp'));
+    var notes = $('th-notes');
+    clearNotes(notes);
+
+    var r = Calc.correctTo20(pct, tempC);
+
+    if (!r.ok) {
+      setText($('th-true'), '—');
+      ['th-corr', 'th-density', 'th-coeff', 'th-delta'].forEach(function (id) { setText($(id), '—'); });
+      addNote(notes, r.error, 'err');
+      return;
+    }
+
+    $('th-true').innerHTML = nf1.format(r.truePct) + '<small>%</small>';
+    setText($('th-note'), Math.abs(r.correction) < 0.05
+      ? 'замер при 20 °C — поправка не нужна'
+      : 'показание ' + nf1.format(pct) + ' % при ' + nf1.format(tempC) + ' °C');
+    setText($('th-corr'), (r.correction > 0 ? '+' : '') + nf1.format(r.correction) + ' %');
+    setText($('th-density'), r.density20.toFixed(3));
+    setText($('th-coeff'), (r.ratePerC > 0 ? '+' : '') + nf.format(r.ratePerC) + ' %/°C');
+    setText($('th-delta'), (tempC - 20 > 0 ? '+' : '') + nf1.format(tempC - 20) + ' °C');
+
+    addNote(notes, tempC > 20
+      ? 'Раствор теплее 20 °C: ареометр тонет глубже и показывает завышенную крепость. Истинное значение ниже показания.'
+      : tempC < 20
+        ? 'Раствор холоднее 20 °C: ареометр показывает заниженную крепость. Истинное значение выше показания.'
+        : 'Температура совпадает с калибровочной — поправка нулевая.');
+
+    if (Math.abs(tempC - 20) > 5) {
+      addNote(notes, 'Отклонение больше 5 °C: поправка уже сравнима с точностью бытового ареометра. Дайте жидкости согреться/остыть до комнатной.', 'warn');
+    }
+    r.warnings.forEach(function (w) { addNote(notes, w, 'warn'); });
+
+    setText($('th-table-pct'), nf1.format(pct));
+    var tbody = $('th-table');
+    if (tbody) {
+      tbody.innerHTML = '';
+      THERMO_TEMPS.forEach(function (t) {
+        var row = Calc.correctTo20(pct, t);
+        if (!row.ok) return;
+        var tr = document.createElement('tr');
+        var c1 = document.createElement('td');
+        c1.textContent = t + ' °C';
+        var c2 = document.createElement('td');
+        c2.className = 'num';
+        c2.textContent = nf1.format(row.truePct) + ' %';
+        var c3 = document.createElement('td');
+        c3.className = 'num';
+        c3.textContent = (row.correction > 0 ? '+' : '') + nf1.format(row.correction) + ' %';
+        tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3);
+        if (Math.abs(t - tempC) < 0.01) tr.style.background = 'rgba(240,168,60,.06)';
+        tbody.appendChild(tr);
+      });
+    }
+  }
+
+  [$('th-pct'), $('th-temp')].forEach(function (el) {
+    if (el) el.addEventListener('input', renderThermo);
+  });
+
   /* ------------------------------ старт ------------------------------ */
 
   renderDilute();
@@ -310,5 +376,6 @@
   renderBrix();
   renderFerment();
   renderFractions();
+  renderThermo();
   renderTime();
 })();

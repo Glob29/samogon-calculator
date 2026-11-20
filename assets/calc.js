@@ -345,6 +345,75 @@
     };
   }
 
+  /* ------------------------ Поправка на температуру ------------------------ */
+
+  /**
+   * Коэффициент объёмного расширения водно-спиртового раствора, 1/°C.
+   * Квадратичная аппроксимация по опорным точкам: вода 0,00021,
+   * 40 % об. — 0,00093, 96 % об. — 0,00116.
+   */
+  function expansionCoeff(volFrac) {
+    var c = Math.min(Math.max(volFrac, 0), 1);
+    return 0.00021 + 0.002379 * c - 0.001447 * c * c;
+  }
+
+  /** Истинная крепость при 20 °C для показания r при температуре T (бисекция). */
+  function solveTrueStrength(measuredPct, tempC) {
+    var target = densityByVol(measuredPct);
+    var dT = tempC - 20;
+    if (dT === 0) return measuredPct;
+    var lo = 0, hi = 100, mid, f;
+    for (var i = 0; i < 80; i++) {
+      mid = (lo + hi) / 2;
+      f = densityByVol(mid) * (1 - expansionCoeff(mid / 100) * dT) - target;
+      if (f > 0) lo = mid; else hi = mid;
+    }
+    return (lo + hi) / 2;
+  }
+
+  /**
+   * Приведение показания спиртомера к 20 °C.
+   *
+   * Ареометр плавает по плотности: в тёплой жидкости он тонет глубже
+   * и показывает больше, чем есть. Ищем такую истинную крепость c,
+   * что плотность раствора при температуре замера равна плотности,
+   * которую имеет раствор с показанием r при 20 °C.
+   *
+   * @param {number} measuredPct показание спиртомера, % об.
+   * @param {number} tempC       температура раствора, °C
+   */
+  function correctTo20(measuredPct, tempC) {
+    if (!(measuredPct > 0) || !(measuredPct <= 100)) {
+      return { ok: false, error: 'Показание спиртомера должно быть от 0 до 100 % об.' };
+    }
+    if (!isFinite(tempC) || tempC < -5 || tempC > 45) {
+      return { ok: false, error: 'Температура должна быть в диапазоне −5…45 °C.' };
+    }
+
+    var truePct = solveTrueStrength(measuredPct, tempC);
+    var correction = truePct - measuredPct;
+
+    // Скорость изменения крепости под температурой, %/°C (численно).
+    var t1 = Math.min(tempC + 1, 45);
+    var t2 = Math.max(tempC - 1, -5);
+    var rate = (solveTrueStrength(measuredPct, t1) - solveTrueStrength(measuredPct, t2)) / (t1 - t2);
+
+    var warnings = [];
+    if (Math.abs(correction) > 6) {
+      warnings.push('Очень большое отклонение: проверьте, тот ли ареометр и та ли шкала.');
+    }
+
+    return {
+      ok: true,
+      truePct: truePct,
+      correction: correction,
+      ratePerC: rate,
+      density20: densityByVol(truePct),
+      coeffPerC: expansionCoeff(truePct / 100) * 100,
+      warnings: warnings
+    };
+  }
+
   /** Ориентировочные сроки брожения, дней: [мин, макс]. */
   var FERMENT_BASE = {
     bakery: [5, 10],   // сахарная на хлебопекарных
@@ -401,6 +470,8 @@
     sgDuringFermentation: sgDuringFermentation,
     fermentationProgress: fermentationProgress,
     fractions: fractions,
+    expansionCoeff: expansionCoeff,
+    correctTo20: correctTo20,
     fermentationDays: fermentationDays,
     tempFactor: tempFactor
   };
