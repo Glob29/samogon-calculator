@@ -124,6 +124,76 @@ check('турбо быстрее хлебопекарных', () => {
   assert.ok(turbo[0] < bakery[0], 'турбо быстрее');
 });
 
+console.log('\nBrix');
+check('20 °Bx → плотность 1,083', () => {
+  near(Calc.sgFromBrix(20), 1.083, 0.001, 'SG');
+});
+check('20 °Bx → 216 г/л сахара', () => {
+  near(Calc.sugarPerLitre(20), 216.6, 1.0, 'г/л');
+});
+check('20 °Bx, 20 л → 4,33 кг сахара', () => {
+  const r = Calc.brixWash(20, 20);
+  near(r.sugarKg, 4.33, 0.05, 'сахар');
+});
+check('20 °Bx → потенциально 12 % об.', () => {
+  const r = Calc.brixWash(20, 20);
+  near(r.abv, 12, 0.2, 'крепость');
+});
+check('20 °Bx, 20 л → 2,6 л АС', () => {
+  const r = Calc.brixWash(20, 20);
+  near(r.alcoholL, 2.6, 0.05, 'АС');
+});
+check('Brix вне диапазона даёт ошибку', () => {
+  assert.ok(Calc.brixWash(0, 20).ok === false, '0 должен быть ошибкой');
+});
+
+console.log('\nХод брожения по Brix');
+check('20 → 20 °Bx: спирта нет', () => {
+  const r = Calc.fermentationProgress(20, 20);
+  assert.ok(r.abv < 0.5, 'ABV ' + r.abv);
+});
+check('20 → 8 °Bx: ≈ 10,9 % об.', () => {
+  const r = Calc.fermentationProgress(20, 8);
+  near(r.abv, 10.9, 0.6, 'ABV');
+});
+check('20 → 8 °Bx: сахар почти кончился', () => {
+  const r = Calc.fermentationProgress(20, 8);
+  assert.ok(r.ready === true, 'должно быть готово, остаток ' + r.residual);
+});
+check('20 → 14 °Bx: ещё бродит', () => {
+  const r = Calc.fermentationProgress(20, 14);
+  assert.ok(r.ready === false, 'рано считать готовым, остаток ' + r.residual);
+});
+check('текущий Brix выше начального — ошибка', () => {
+  assert.ok(Calc.fermentationProgress(15, 20).ok === false, 'должна быть ошибка');
+});
+
+console.log('\nФракции');
+check('10 л 40 % → 4 л АС', () => {
+  const r = Calc.fractions(10, 40, 8, 15);
+  near(r.alcoholL, 4, 0.001, 'АС');
+});
+check('головы 8 % АС = 0,32 л АС / 410 мл', () => {
+  const r = Calc.fractions(10, 40, 8, 15);
+  near(r.heads.alcoholL, 0.32, 0.001, 'АС голов');
+  near(r.heads.volumeL * 1000, 410.3, 1, 'мл голов');
+});
+check('хвосты 15 % АС = 2,4 л жидкости', () => {
+  const r = Calc.fractions(10, 40, 8, 15);
+  near(r.tails.volumeL, 2.4, 0.01, 'хвосты');
+});
+check('сумма фракций = весь АС', () => {
+  const r = Calc.fractions(10, 40, 8, 15);
+  near(r.heads.alcoholL + r.body.alcoholL + r.tails.alcoholL, r.alcoholL, 1e-9, 'баланс');
+});
+check('тело 77 % АС ≈ 4,4 л', () => {
+  const r = Calc.fractions(10, 40, 8, 15);
+  near(r.body.volumeL, 4.4, 0.01, 'тело');
+});
+check('сумма голов и хвостов ≥ 100 % — ошибка', () => {
+  assert.ok(Calc.fractions(10, 40, 60, 50).ok === false, 'должна быть ошибка');
+});
+
 console.log('');
 if (failures.length) {
   console.log('Провалено: ' + failures.length + ' из ' + (passed + failures.length));

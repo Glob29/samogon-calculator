@@ -192,6 +192,159 @@
     };
   }
 
+  /* ------------------------- Brix / рефрактометр ------------------------- */
+
+  /**
+   * Плотность раствора сахарозы по Brix (20 °C).
+   * Стандартная аппроксимация: SG = 1 + B / (258,6 − B/258,2 · 227,1).
+   */
+  function sgFromBrix(brix) {
+    if (!isFinite(brix) || brix <= 0) return 1;
+    if (brix > 100) brix = 100;
+    return 1 + brix / (258.6 - (brix / 258.2) * 227.1);
+  }
+
+  /** Сахар в литре раствора по Brix, г/л. */
+  function sugarPerLitre(brix) {
+    if (!isFinite(brix) || brix <= 0) return 0;
+    return sgFromBrix(brix) * brix * 10;
+  }
+
+  /**
+   * Сусло по показанию рефрактометра.
+   * Brix — массовая доля сахара, %, то есть сахаристость напрямую.
+   */
+  function brixWash(brix, volumeL) {
+    if (!(brix > 0) || !(brix < 100)) {
+      return { ok: false, error: 'Brix должен быть больше 0 и меньше 100.' };
+    }
+    if (!(volumeL > 0)) {
+      return { ok: false, error: 'Укажите объём сусла больше нуля.' };
+    }
+
+    var sg = sgFromBrix(brix);
+    var perL = sugarPerLitre(brix);
+    var sugarKg = perL * volumeL / 1000;
+    var alcoholL = sugarKg * SUGAR_TO_ALCOHOL;
+    var abv = brix * SUGAR_TO_SPIRIT;
+
+    var warnings = [];
+    if (brix > 22) warnings.push('Выше 22 Bx дрожжи не осилят весь сахар — часть уйдёт в недоброд.');
+    if (brix < 10) warnings.push('Ниже 10 Bx сусло слабое, выхода почти не будет.');
+
+    return {
+      ok: true,
+      sg: sg,
+      sugarPerL: perL,
+      sugarKg: sugarKg,
+      sugarPct: brix,
+      hydro: 100 / brix - 1,          // во сколько раз воды больше, чем сахара
+      abv: abv,
+      alcoholL: alcoholL,
+      spirit40L: alcoholL / 0.4,
+      volumeL: volumeL,
+      warnings: warnings
+    };
+  }
+
+  /**
+   * Поправка рефрактометра на спирт (формула Шона Террилла).
+   * Возвращает текущую плотность по начальному и текущему Brix.
+   */
+  function sgDuringFermentation(brixInitial, brixCurrent) {
+    var bi = brixInitial, bc = brixCurrent;
+    return 1.001843
+      - 0.002318474 * bi - 0.000007775 * bi * bi - 0.000000034 * bi * bi * bi
+      + 0.00574 * bc + 0.00003344 * bc * bc + 0.000000086 * bc * bc * bc;
+  }
+
+  /**
+   * Ход брожения по двум замерам рефрактометром.
+   * Без поправки «текущий Brix» врёт: спирт меняет коэффициент преломления.
+   */
+  function fermentationProgress(brixInitial, brixCurrent) {
+    if (!(brixInitial > 0) || !(brixCurrent >= 0)) {
+      return { ok: false, error: 'Введите начальный и текущий Brix.' };
+    }
+    if (brixCurrent > brixInitial + 0.5) {
+      return { ok: false, error: 'Текущий Brix выше начального — проверьте замер.' };
+    }
+
+    var sgStart = sgFromBrix(brixInitial);
+    var sgNow = sgDuringFermentation(brixInitial, brixCurrent);
+    var abv = Math.max(0, (sgStart - sgNow) * 131.25);
+    var residual = Math.max(0, (sgNow - 1) * 1000 * 2.6);   // г/л
+    var ready = residual < 15;
+
+    var warnings = [];
+    if (residual > 40) warnings.push('Остаточного сахара много — брожение ещё идёт.');
+    if (abv > 14) warnings.push('Крепость выше 14 % — дрожжи на пределе, возможен останов.');
+
+    return {
+      ok: true,
+      sgStart: sgStart,
+      sgNow: sgNow,
+      abv: abv,
+      residual: residual,
+      residualPct: residual / 10,
+      ready: ready,
+      warnings: warnings
+    };
+  }
+
+  /* ------------------------- Фракции при перегонке ------------------------- */
+
+  /** Типичные крепости фракций, % об. */
+  var FRACTION_STRENGTH = { heads: 78, body: 70, tails: 25 };
+
+  /**
+   * Головы и хвосты от объёма абсолютного спирта.
+   *
+   * @param {number} volumeL  объём спирта-сырца, л
+   * @param {number} volPct   крепость сырца, % об.
+   * @param {number} headsPct доля голов, % от АС
+   * @param {number} tailsPct доля хвостов, % от АС
+   */
+  function fractions(volumeL, volPct, headsPct, tailsPct) {
+    if (!(volumeL > 0) || !(volPct > 0)) {
+      return { ok: false, error: 'Укажите объём и крепость спирта-сырца.' };
+    }
+    if (!(headsPct >= 0) || !(tailsPct >= 0) || headsPct + tailsPct >= 100) {
+      return { ok: false, error: 'Сумма голов и хвостов должна быть меньше 100 % АС.' };
+    }
+
+    var alcoholL = volumeL * volPct / 100;
+    var headsAlcohol = alcoholL * headsPct / 100;
+    var tailsAlcohol = alcoholL * tailsPct / 100;
+    var bodyAlcohol = alcoholL - headsAlcohol - tailsAlcohol;
+
+    var warnings = [];
+    if (headsPct < 3) warnings.push('Меньше 3 % на головы — риск, что метанол и альдегиды попадут в тело.');
+    if (headsPct > 12) warnings.push('Больше 12 % на головы — потеряете много спирта без выигрыша в чистоте.');
+    if (volumeL > 25) warnings.push('Большой объём: следите за температурой в кубе и не перегревайте.');
+
+    return {
+      ok: true,
+      alcoholL: alcoholL,
+      heads: {
+        alcoholL: headsAlcohol,
+        volumeL: headsAlcohol / (FRACTION_STRENGTH.heads / 100),
+        strength: FRACTION_STRENGTH.heads
+      },
+      body: {
+        alcoholL: bodyAlcohol,
+        volumeL: bodyAlcohol / (FRACTION_STRENGTH.body / 100),
+        strength: FRACTION_STRENGTH.body
+      },
+      tails: {
+        alcoholL: tailsAlcohol,
+        volumeL: tailsAlcohol / (FRACTION_STRENGTH.tails / 100),
+        strength: FRACTION_STRENGTH.tails
+      },
+      warnings: warnings
+    };
+  }
+
   /** Ориентировочные сроки брожения, дней: [мин, макс]. */
   var FERMENT_BASE = {
     bakery: [5, 10],   // сахарная на хлебопекарных
@@ -235,12 +388,19 @@
     SUGAR_TO_ALCOHOL: SUGAR_TO_ALCOHOL,
     FERMENT_BASE: FERMENT_BASE,
     FERMENT_LABELS: FERMENT_LABELS,
+    FRACTION_STRENGTH: FRACTION_STRENGTH,
     densityByMass: densityByMass,
     densityByVol: densityByVol,
     volFractionFromMass: volFractionFromMass,
     massFractionFromVol: massFractionFromVol,
     dilute: dilute,
     mash: mash,
+    sgFromBrix: sgFromBrix,
+    sugarPerLitre: sugarPerLitre,
+    brixWash: brixWash,
+    sgDuringFermentation: sgDuringFermentation,
+    fermentationProgress: fermentationProgress,
+    fractions: fractions,
     fermentationDays: fermentationDays,
     tempFactor: tempFactor
   };

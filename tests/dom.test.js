@@ -105,6 +105,38 @@ function assert(cond, msg) {
     assert(/\d+–\d+ дн/.test(text('m-days')), 'получено: ' + text('m-days'));
   });
 
+  console.log('\nBrix');
+  expect('20 °Bx → потенциал 12 %', () => {
+    assert(text('b-abv').indexOf('12') === 0, 'получено: ' + text('b-abv'));
+  });
+  expect('плотность сусла 1,083', () => {
+    assert(text('b-sg') === '1.083' || text('b-sg') === '1,083', 'получено: ' + text('b-sg'));
+  });
+  expect('пересчёт при 10 °Bx → 6 %', () => {
+    input('b-brix', 10);
+    assert(text('b-abv').indexOf('6') === 0, 'получено: ' + text('b-abv'));
+  });
+  expect('ход брожения 20 → 8 °Bx: готово', () => {
+    assert(text('bf-status').indexOf('перегонять') >= 0, 'статус: ' + text('bf-status'));
+    assert(text('bf-abv').indexOf('10') === 0, 'крепость: ' + text('bf-abv'));
+  });
+  expect('ход брожения 20 → 18 °Bx: ещё идёт', () => {
+    input('bf-now', 18);
+    assert(text('bf-status').indexOf('ещё идёт') >= 0, 'статус: ' + text('bf-status'));
+  });
+
+  console.log('\nФракции');
+  expect('10 л 40 %: головы ≈ 410 мл', () => {
+    assert(text('f-heads-ml').indexOf('410') === 0, 'получено: ' + text('f-heads-ml'));
+  });
+  expect('АС 4 л', () => {
+    assert(text('f-alcohol').indexOf('4') === 0, 'получено: ' + text('f-alcohol'));
+  });
+  expect('масштабируется: 20 л → 820 мл голов', () => {
+    input('f-volume', 20);
+    assert(text('f-heads-ml').indexOf('820') === 0, 'получено: ' + text('f-heads-ml'));
+  });
+
   console.log('\nСроки');
   expect('таблица по 6 видам сырья', () => {
     const rows = doc.querySelectorAll('#t-table tr');

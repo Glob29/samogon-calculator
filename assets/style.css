@@ -113,7 +113,21 @@ h1 {
   cursor: pointer;
   white-space: nowrap;
   transition: color .15s, background .15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
+
+.ti {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  opacity: .8;
+  transition: opacity .15s;
+}
+
+.tab:hover .ti,
+.tab.is-active .ti { opacity: 1; }
 
 .tab:hover { color: var(--text); }
 

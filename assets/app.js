@@ -197,9 +197,118 @@
     if (el) el.addEventListener('input', renderTime);
   });
 
+  /* ------------------------------- Brix ------------------------------- */
+
+  function renderBrix() {
+    var brix = readNumber($('b-brix'));
+    var volumeL = readNumber($('b-volume'));
+    var notes = $('b-notes');
+    clearNotes(notes);
+
+    var r = Calc.brixWash(brix, volumeL);
+
+    if (!r.ok) {
+      setText($('b-abv'), '—');
+      ['b-sg', 'b-perl', 'b-total', 'b-alcohol', 'b-spirit', 'b-hydro'].forEach(function (id) { setText($(id), '—'); });
+      addNote(notes, r.error, 'err');
+      return;
+    }
+
+    $('b-abv').innerHTML = nf1.format(r.abv) + '<small>%</small>';
+    setText($('b-abv-note'), 'теоретический максимум, реально на 10–15 % ниже');
+    setText($('b-sg'), r.sg.toFixed(3));
+    setText($('b-perl'), nf.format(r.sugarPerL) + ' г/л');
+    setText($('b-total'), nf1.format(r.sugarKg) + ' кг');
+    setText($('b-alcohol'), nf1.format(r.alcoholL) + ' л');
+    setText($('b-spirit'), nf1.format(r.spirit40L) + ' л');
+    setText($('b-hydro'), '1 : ' + nf1.format(r.hydro));
+
+    addNote(notes, 'Brix — массовая доля сахара в растворе, то есть сахаристость напрямую: ' +
+      nf1.format(r.sugarPct) + ' °Bx = ' + nf1.format(r.sugarPct) + ' % сахара.');
+    addNote(notes, 'Плотность сусла ' + r.sg.toFixed(3) + ' — по ней же можно сверять ареометр-сахаромер.');
+    r.warnings.forEach(function (w) { addNote(notes, w, 'warn'); });
+  }
+
+  function renderFerment() {
+    var start = readNumber($('bf-start'));
+    var now = readNumber($('bf-now'));
+    var notes = $('bf-notes');
+    clearNotes(notes);
+
+    var r = Calc.fermentationProgress(start, now);
+
+    if (!r.ok) {
+      setText($('bf-abv'), '—');
+      ['bf-sg', 'bf-sgstart', 'bf-residual', 'bf-residual-pct'].forEach(function (id) { setText($(id), '—'); });
+      setText($('bf-status'), '');
+      addNote(notes, r.error, 'err');
+      return;
+    }
+
+    $('bf-abv').innerHTML = nf1.format(r.abv) + '<small>%</small>';
+    setText($('bf-status'), r.ready ? 'Сахар почти выбродил — можно перегонять' : 'Брожение ещё идёт');
+    setText($('bf-sg'), r.sgNow.toFixed(3));
+    setText($('bf-sgstart'), r.sgStart.toFixed(3));
+    setText($('bf-residual'), nf.format(r.residual) + ' г/л');
+    setText($('bf-residual-pct'), nf1.format(r.residualPct) + ' %');
+
+    addNote(notes, 'Спирт меняет коэффициент преломления, поэтому «сырой» текущий Brix занижает сахар. Здесь применена поправка Террилла: плотность считается по паре «начальный + текущий Brix».');
+    if (r.ready) addNote(notes, 'Остаточного сахара меньше 15 г/л. Подтвердите готовность: нет газа, брага осветлилась, вкус горький без сладости.');
+    r.warnings.forEach(function (w) { addNote(notes, w, 'warn'); });
+  }
+
+  [$('b-brix'), $('b-volume')].forEach(function (el) {
+    if (el) el.addEventListener('input', renderBrix);
+  });
+  [$('bf-start'), $('bf-now')].forEach(function (el) {
+    if (el) el.addEventListener('input', renderFerment);
+  });
+
+  /* ----------------------------- фракции ----------------------------- */
+
+  function renderFractions() {
+    var volumeL = readNumber($('f-volume'));
+    var volPct = readNumber($('f-pct'));
+    var headsPct = readNumber($('f-heads'));
+    var tailsPct = readNumber($('f-tails'));
+    var notes = $('f-notes');
+    clearNotes(notes);
+
+    var r = Calc.fractions(volumeL, volPct, headsPct, tailsPct);
+
+    if (!r.ok) {
+      setText($('f-heads-ml'), '—');
+      ['f-alcohol', 'f-heads-ac', 'f-body', 'f-tails-l', 'f-heads-strength'].forEach(function (id) { setText($(id), '—'); });
+      addNote(notes, r.error, 'err');
+      return;
+    }
+
+    $('f-heads-ml').innerHTML = nf.format(r.heads.volumeL * 1000) + '<small>мл</small>';
+    setText($('f-heads-note'), 'при крепости голов ' + r.heads.strength + ' % об.');
+    setText($('f-alcohol'), nf1.format(r.alcoholL) + ' л');
+    setText($('f-heads-ac'), nf1.format(r.heads.alcoholL) + ' л');
+    setText($('f-body'), nf1.format(r.body.volumeL) + ' л');
+    setText($('f-tails-l'), nf1.format(r.tails.volumeL) + ' л');
+    setText($('f-heads-strength'), r.heads.strength + ' %');
+
+    addNote(notes, 'Тело: ' + nf1.format(r.body.alcoholL) + ' л АС, примерно ' +
+      nf1.format(r.body.volumeL) + ' л при средней крепости ' + r.body.strength + ' %.');
+    addNote(notes, 'Хвосты: ' + nf1.format(r.tails.alcoholL) + ' л АС, примерно ' +
+      nf1.format(r.tails.volumeL) + ' л при ' + r.tails.strength + ' %. Их не выливают — добавляют в следующий перегон.');
+    addNote(notes, 'Головы отбирают по каплям, 1–2 капли в секунду, не смешивая с телом. Ориентир окончания тела — крепость в струе ниже 45 %.');
+    r.warnings.forEach(function (w) { addNote(notes, w, 'warn'); });
+  }
+
+  [$('f-volume'), $('f-pct'), $('f-heads'), $('f-tails')].forEach(function (el) {
+    if (el) el.addEventListener('input', renderFractions);
+  });
+
   /* ------------------------------ старт ------------------------------ */
 
   renderDilute();
   renderMash();
+  renderBrix();
+  renderFerment();
+  renderFractions();
   renderTime();
 })();
