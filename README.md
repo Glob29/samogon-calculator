@@ -8,6 +8,8 @@
 
 ## Скачать
 
+**Онлайн, без установки:** https://glob29.github.io/samogon-calculator/ — работает с телефона и компьютера.
+
 Готовый архив: [последний релиз](https://github.com/Glob29/samogon-calculator/releases/latest) → `samogon-calculator-1.0.0.zip`. Распакуйте в любую папку и откройте `index.html` — устанавливать ничего не нужно.
 
 Можно и без архива: кнопка **Code → Download ZIP** на странице репозитория.
@@ -178,6 +180,10 @@ tools/                  генератор иконки и установщик 
 
 - Плотности водно-спиртовых растворов: [Ethanol data page](https://en.wikipedia.org/wiki/Ethanol_(data_page)) (по Lange, 1967).
 - Практические коэффициенты выхода и сроки: обзоры [о разбавлении](https://tltbeer.ru/samogon/articles/k/ka/kak-razbavit-samogon-kalkulyator-samogonshchika-onlajn-raschet.html) и [о расчёте сахара](https://tltbeer.ru/samogon/articles/s/sk/skolko-sakhara-nuzhno-dlya-bragi-na-samogon.html).
+
+## Лицензия
+
+[MIT](LICENSE) © 2026 Glob29 — можно свободно использовать, изменять и распространять, в том числе коммерчески, при сохранении уведомления об авторстве.
 
 ## Дисклеймер
 

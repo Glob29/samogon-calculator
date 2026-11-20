@@ -2,7 +2,9 @@
   "name": "samogon-calculator",
   "version": "1.0.0",
   "private": true,
-  "description": "Калькулятор самогонщика: разбавление спирта с учётом контракции, сахаристость браги, сроки брожения",
+  "description": "Калькулятор самогонщика: разбавление спирта с учётом контракции, сахаристость браги, сроки брожения. RU/EN/ZH",
+  "license": "MIT",
+  "author": "Glob29",
   "scripts": {
     "test": "node tests/calc.test.js && node tests/structure.test.js && node tests/dom.test.js",
     "test:calc": "node tests/calc.test.js",
