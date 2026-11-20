@@ -553,3 +553,31 @@ footer {
 
 .seo-article tr:last-child td { border-bottom: 0; }
 .seo-article tbody tr:hover td { background: #12161c; }
+
+
+/* кнопка доната на странице поддержки */
+.donate-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 14px 0 18px; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, var(--accent), #dd901f);
+  color: #1a1206;
+  font-weight: 700;
+  text-decoration: none;
+  border: 0;
+  cursor: pointer;
+  transition: filter .15s, transform .1s;
+}
+
+.btn:hover { filter: brightness(1.05); }
+.btn:active { transform: translateY(1px); }
+
+.btn.is-placeholder {
+  opacity: .5;
+  filter: grayscale(.3);
+  pointer-events: none;
+}
