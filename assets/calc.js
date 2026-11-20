@@ -86,16 +86,16 @@
   function dilute(volPct, volumeL, targetPct) {
     var warnings = [];
     if (!(volPct > 0) || !(volumeL > 0) || !(targetPct > 0)) {
-      return { ok: false, error: 'Введите крепость, объём и желаемую крепость больше нуля.' };
+      return { ok: false, errorKey: 'dilute.err.input' };
     }
     if (targetPct > volPct) {
-      return { ok: false, error: 'Водой крепость не повысить: желаемая крепость выше исходной.' };
+      return { ok: false, errorKey: 'dilute.err.higher' };
     }
     if (targetPct < 1) {
-      warnings.push('Желаемая крепость ниже 1 % — это уже не напиток, а промывка.');
+      warnings.push('dilute.warn.low');
     }
     if (volPct > 96.5) {
-      warnings.push('Выше 96,5 % об. в домашних условиях крепость не поднять — это предел азеотропа.');
+      warnings.push('dilute.warn.azeotrope');
     }
 
     var v1 = volPct / 100, v2 = targetPct / 100;
@@ -115,10 +115,7 @@
     var contractionPct = (volumeL + waterAddL - finalL) / (volumeL + waterAddL) * 100;
 
     if (waterAddL <= 0) {
-      warnings.push('Воды не требуется: исходная крепость уже не выше желаемой.');
-    }
-    if (volumeL + waterAddL > 0 && Math.abs(waterAddL - simpleL) / (simpleL || 1) > 0.02) {
-      warnings.push('Простая формула даёт заметно другой объём воды — так работает контракция, ориентируйтесь на точный расчёт.');
+      warnings.push('dilute.warn.nowater');
     }
 
     return {
@@ -146,7 +143,7 @@
   function mash(sugarKg, waterL, yeast, tempC) {
     var warnings = [];
     if (!(sugarKg > 0) || !(waterL > 0)) {
-      return { ok: false, error: 'Укажите массу сахара и объём воды больше нуля.' };
+      return { ok: false, errorKey: 'mash.err.input' };
     }
 
     var volumeL = waterL + sugarKg * SUGAR_VOLUME;
@@ -158,25 +155,25 @@
     var ferm = fermentationDays(yeast, tempC);
 
     if (hydro < 3) {
-      warnings.push('Гидромодуль короче 1:3 — обычные дрожжи такого не вытянут, нужны турбо и подкормка.');
+      warnings.push('mash.warn.shorthydro');
     }
     if (hydro > 6) {
-      warnings.push('Гидромодуль длиннее 1:6 — брага будет слабой, а перегонять придётся больше объёма.');
+      warnings.push('mash.warn.longhydro');
     }
     if (sugarPct > 22) {
-      warnings.push('Сахаристость выше 22 % — дрожжи погибнут от спирта раньше, чем съедят весь сахар.');
+      warnings.push('mash.warn.toosweet');
     }
     if (sugarPct < 10) {
-      warnings.push('Сахаристость ниже 10 % — выход будет мизерным.');
+      warnings.push('mash.warn.tooweak');
     }
     if (abvBraga > 14) {
-      warnings.push('Расчётная крепость браги выше 14 % — реальная будет меньше: дрожжи не дойдут до конца.');
+      warnings.push('mash.warn.strong');
     }
     if (tempC && tempC < 18) {
-      warnings.push('Ниже 18 °C брожение затягивается, риск скисания.');
+      warnings.push('mash.warn.cold');
     }
     if (tempC && tempC > 30) {
-      warnings.push('Выше 30 °C дрожжи страдают и дают больше сивушных примесей.');
+      warnings.push('mash.warn.hot');
     }
 
     return {
@@ -216,10 +213,10 @@
    */
   function brixWash(brix, volumeL) {
     if (!(brix > 0) || !(brix < 100)) {
-      return { ok: false, error: 'Brix должен быть больше 0 и меньше 100.' };
+      return { ok: false, errorKey: 'brix.err.range' };
     }
     if (!(volumeL > 0)) {
-      return { ok: false, error: 'Укажите объём сусла больше нуля.' };
+      return { ok: false, errorKey: 'brix.err.volume' };
     }
 
     var sg = sgFromBrix(brix);
@@ -229,8 +226,8 @@
     var abv = brix * SUGAR_TO_SPIRIT;
 
     var warnings = [];
-    if (brix > 22) warnings.push('Выше 22 Bx дрожжи не осилят весь сахар — часть уйдёт в недоброд.');
-    if (brix < 10) warnings.push('Ниже 10 Bx сусло слабое, выхода почти не будет.');
+    if (brix > 22) warnings.push('brix.warn.toosweet');
+    if (brix < 10) warnings.push('brix.warn.tooweak');
 
     return {
       ok: true,
@@ -264,10 +261,10 @@
    */
   function fermentationProgress(brixInitial, brixCurrent) {
     if (!(brixInitial > 0) || !(brixCurrent >= 0)) {
-      return { ok: false, error: 'Введите начальный и текущий Brix.' };
+      return { ok: false, errorKey: 'ferment.err.input' };
     }
     if (brixCurrent > brixInitial + 0.5) {
-      return { ok: false, error: 'Текущий Brix выше начального — проверьте замер.' };
+      return { ok: false, errorKey: 'ferment.err.higher' };
     }
 
     var sgStart = sgFromBrix(brixInitial);
@@ -277,8 +274,8 @@
     var ready = residual < 15;
 
     var warnings = [];
-    if (residual > 40) warnings.push('Остаточного сахара много — брожение ещё идёт.');
-    if (abv > 14) warnings.push('Крепость выше 14 % — дрожжи на пределе, возможен останов.');
+    if (residual > 40) warnings.push('ferment.warn.sugar');
+    if (abv > 14) warnings.push('ferment.warn.strong');
 
     return {
       ok: true,
@@ -307,10 +304,10 @@
    */
   function fractions(volumeL, volPct, headsPct, tailsPct) {
     if (!(volumeL > 0) || !(volPct > 0)) {
-      return { ok: false, error: 'Укажите объём и крепость спирта-сырца.' };
+      return { ok: false, errorKey: 'frac.err.input' };
     }
     if (!(headsPct >= 0) || !(tailsPct >= 0) || headsPct + tailsPct >= 100) {
-      return { ok: false, error: 'Сумма голов и хвостов должна быть меньше 100 % АС.' };
+      return { ok: false, errorKey: 'frac.err.sum' };
     }
 
     var alcoholL = volumeL * volPct / 100;
@@ -319,9 +316,9 @@
     var bodyAlcohol = alcoholL - headsAlcohol - tailsAlcohol;
 
     var warnings = [];
-    if (headsPct < 3) warnings.push('Меньше 3 % на головы — риск, что метанол и альдегиды попадут в тело.');
-    if (headsPct > 12) warnings.push('Больше 12 % на головы — потеряете много спирта без выигрыша в чистоте.');
-    if (volumeL > 25) warnings.push('Большой объём: следите за температурой в кубе и не перегревайте.');
+    if (headsPct < 3) warnings.push('frac.warn.lowheads');
+    if (headsPct > 12) warnings.push('frac.warn.highheads');
+    if (volumeL > 25) warnings.push('frac.warn.large');
 
     return {
       ok: true,
@@ -384,10 +381,10 @@
    */
   function correctTo20(measuredPct, tempC) {
     if (!(measuredPct > 0) || !(measuredPct <= 100)) {
-      return { ok: false, error: 'Показание спиртомера должно быть от 0 до 100 % об.' };
+      return { ok: false, errorKey: 'thermo.err.pct' };
     }
     if (!isFinite(tempC) || tempC < -5 || tempC > 45) {
-      return { ok: false, error: 'Температура должна быть в диапазоне −5…45 °C.' };
+      return { ok: false, errorKey: 'thermo.err.temp' };
     }
 
     var truePct = solveTrueStrength(measuredPct, tempC);
@@ -400,7 +397,7 @@
 
     var warnings = [];
     if (Math.abs(correction) > 6) {
-      warnings.push('Очень большое отклонение: проверьте, тот ли ареометр и та ли шкала.');
+      warnings.push('thermo.warn.big');
     }
 
     return {

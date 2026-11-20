@@ -1,16 +1,63 @@
 /*
- * Калькулятор самогонщика — интерфейс.
- * Вся математика лежит в assets/calc.js; здесь только чтение полей и вывод.
+ * Калькулятор самогонщика — интерфейс и локализация.
+ * Математика в assets/calc.js, словари в assets/i18n.js.
  */
 (function () {
   'use strict';
 
   var $ = function (id) { return document.getElementById(id); };
 
-  var nf = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 });
-  var nf1 = new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 });
+  var LANGS = ['ru', 'en', 'zh'];
+  var LOCALES = { ru: 'ru-RU', en: 'en-US', zh: 'zh-CN' };
+  var LANG_KEY = 'samogon.lang';
 
-  /** Число из поля ввода: пустая строка и запятая обрабатываются. */
+  var lang = 'ru';
+  try {
+    var savedLang = localStorage.getItem(LANG_KEY);
+    if (LANGS.indexOf(savedLang) >= 0) lang = savedLang;
+  } catch (e) { /* localStorage может быть недоступен */ }
+
+  var nf, nf1, nf3;
+
+  function setFormatters() {
+    var loc = LOCALES[lang] || 'ru-RU';
+    nf = new Intl.NumberFormat(loc, { maximumFractionDigits: 2 });
+    nf1 = new Intl.NumberFormat(loc, { maximumFractionDigits: 1 });
+    nf3 = new Intl.NumberFormat(loc, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+  }
+  setFormatters();
+
+  /* ------------------------------ локализация ------------------------------ */
+
+  function t(key, vars) {
+    var dict = (window.I18N && (window.I18N[lang] || window.I18N.ru)) || {};
+    var s = dict[key];
+    if (s == null) {
+      var ru = window.I18N && window.I18N.ru;
+      s = (ru && ru[key] != null) ? ru[key] : key;
+    }
+    if (vars) {
+      Object.keys(vars).forEach(function (k) {
+        s = s.split('{' + k + '}').join(String(vars[k]));
+      });
+    }
+    return s;
+  }
+
+  function applyStaticText() {
+    document.documentElement.lang = lang;
+    document.title = t('app.title');
+
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i18n]'), function (el) {
+      el.textContent = t(el.getAttribute('data-i18n'));
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-i18n-html]'), function (el) {
+      el.innerHTML = t(el.getAttribute('data-i18n-html'));
+    });
+  }
+
+  /* ------------------------------ утилиты ------------------------------ */
+
   function readNumber(el) {
     if (!el) return NaN;
     var raw = String(el.value).replace(',', '.').replace(/\s+/g, '');
@@ -21,6 +68,11 @@
 
   function setText(el, text) {
     if (el) el.textContent = text;
+  }
+
+  /** Крупное значение с единицей измерения. */
+  function bigValue(text, unitText) {
+    return text + '<small>' + unitText + '</small>';
   }
 
   function clearNotes(el) {
@@ -41,13 +93,27 @@
     el.appendChild(div);
   }
 
+  function renderMessages(notesEl, r) {
+    clearNotes(notesEl);
+    if (!r.ok) {
+      addNote(notesEl, t(r.errorKey), 'err');
+      return false;
+    }
+    (r.warnings || []).forEach(function (key) { addNote(notesEl, t(key), 'warn'); });
+    return true;
+  }
+
+  function resetCells(ids) {
+    ids.forEach(function (id) { setText($(id), '—'); });
+  }
+
   /* ------------------------------ табы ------------------------------ */
 
   var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
   tabs.forEach(function (tab) {
     tab.addEventListener('click', function () {
       var name = tab.getAttribute('data-tab');
-      tabs.forEach(function (t) { t.classList.toggle('is-active', t === tab); });
+      tabs.forEach(function (t2) { t2.classList.toggle('is-active', t2 === tab); });
       Array.prototype.forEach.call(document.querySelectorAll('.panel'), function (p) {
         p.classList.toggle('is-active', p.id === 'tab-' + name);
       });
@@ -56,43 +122,30 @@
 
   /* --------------------------- разбавление --------------------------- */
 
-  var dInputs = [$('d-vol-pct'), $('d-volume'), $('d-target')];
-
   function renderDilute() {
-    var volPct = readNumber($('d-vol-pct'));
-    var volumeL = readNumber($('d-volume'));
-    var targetPct = readNumber($('d-target'));
+    var r = Calc.dilute(readNumber($('d-vol-pct')), readNumber($('d-volume')), readNumber($('d-target')));
     var notes = $('d-notes');
     clearNotes(notes);
 
-    var r = Calc.dilute(volPct, volumeL, targetPct);
-
     if (!r.ok) {
-      setText($('d-water'), '—');
-      setText($('d-final'), '—');
-      setText($('d-simple'), '—');
-      setText($('d-ethanol'), '—');
-      setText($('d-contraction'), '—');
-      addNote(notes, r.error, 'err');
+      resetCells(['d-water', 'd-final', 'd-simple', 'd-ethanol', 'd-contraction']);
+      addNote(notes, t(r.errorKey), 'err');
       return;
     }
 
-    $('d-water').innerHTML = nf.format(r.waterL) + '<small>л</small>';
-    setText($('d-water-note'), nf.format(r.waterMl) + ' мл · на каждый литр исходного');
-    setText($('d-final'), nf.format(r.finalL) + ' л');
-    setText($('d-simple'), nf.format(r.simpleWaterL) + ' л');
-    setText($('d-ethanol'), nf.format(r.massEthanolKg) + ' кг');
+    $('d-water').innerHTML = bigValue(nf.format(r.waterL), t('unit.l'));
+    setText($('d-water-note'), t('dilute.note.perL', { ml: nf.format(r.waterMl) + ' ' + t('unit.ml') }));
+    setText($('d-final'), nf.format(r.finalL) + ' ' + t('unit.l'));
+    setText($('d-simple'), nf.format(r.simpleWaterL) + ' ' + t('unit.l'));
+    setText($('d-ethanol'), nf.format(r.massEthanolKg) + ' ' + t('unit.kg'));
     setText($('d-contraction'), nf1.format(r.contractionPct) + ' %');
 
-    var diff = r.waterL - r.simpleWaterL;
-    addNote(notes, 'Простая формула без учёта сжатия дала бы ' + nf.format(r.simpleWaterL) +
-      ' л — разница ' + nf.format(Math.abs(diff)) + ' л. Для точного результата берите верхнее значение.');
-    addNote(notes, 'Ориентир: 0,6 л безводного спирта на 1 кг сахара — это как раз ваш объём ' +
-      nf.format(r.massEthanolKg) + ' кг.');
-    r.warnings.forEach(function (w) { addNote(notes, w, 'warn'); });
+    addNote(notes, t('dilute.note.compare', { simple: nf.format(r.simpleWaterL) + ' ' + t('unit.l') }));
+    addNote(notes, t('dilute.note.ethanol', { eth: nf.format(r.massEthanolKg) + ' ' + t('unit.kg') }));
+    (r.warnings || []).forEach(function (key) { addNote(notes, t(key), 'warn'); });
   }
 
-  dInputs.forEach(function (el) {
+  [$('d-vol-pct'), $('d-volume'), $('d-target')].forEach(function (el) {
     if (el) el.addEventListener('input', renderDilute);
   });
 
@@ -110,151 +163,82 @@
 
   /* ------------------------------ брага ------------------------------ */
 
-  var mInputs = [$('m-sugar'), $('m-water'), $('m-yeast'), $('m-temp')];
-
   function renderMash() {
-    var sugarKg = readNumber($('m-sugar'));
-    var waterL = readNumber($('m-water'));
-    var yeast = $('m-yeast').value;
-    var tempC = readNumber($('m-temp'));
+    var r = Calc.mash(readNumber($('m-sugar')), readNumber($('m-water')),
+      $('m-yeast').value, readNumber($('m-temp')));
     var notes = $('m-notes');
     clearNotes(notes);
 
-    var r = Calc.mash(sugarKg, waterL, yeast, tempC);
-
     if (!r.ok) {
-      setText($('m-spirit40'), '—');
-      ['m-hydro', 'm-sugarpct', 'm-abv', 'm-volume', 'm-alcohol', 'm-days'].forEach(function (id) { setText($(id), '—'); });
-      addNote(notes, r.error, 'err');
+      resetCells(['m-spirit40', 'm-hydro', 'm-sugarpct', 'm-abv', 'm-volume', 'm-alcohol', 'm-days']);
+      addNote(notes, t(r.errorKey), 'err');
       return;
     }
 
-    $('m-spirit40').innerHTML = nf1.format(r.spirit40L) + '<small>л</small>';
-    setText($('m-spirit-note'), 'теоретический выход, реальный на 10–15 % ниже');
+    $('m-spirit40').innerHTML = bigValue(nf1.format(r.spirit40L), t('unit.l'));
     setText($('m-hydro'), '1 : ' + nf1.format(r.hydro));
     setText($('m-sugarpct'), nf1.format(r.sugarPct) + ' %');
     setText($('m-abv'), nf1.format(r.abvBraga) + ' %');
-    setText($('m-volume'), nf1.format(r.volumeL) + ' л');
-    setText($('m-alcohol'), nf1.format(r.alcoholL) + ' л');
-    setText($('m-days'), r.days[0] + '–' + r.days[1] + ' дн.');
+    setText($('m-volume'), nf1.format(r.volumeL) + ' ' + t('unit.l'));
+    setText($('m-alcohol'), nf1.format(r.alcoholL) + ' ' + t('unit.l'));
+    setText($('m-days'), r.days[0] + '–' + r.days[1] + ' ' + t('unit.days'));
 
-    addNote(notes, 'Ориентир по ёмкости: ' + nf1.format(r.volumeL) +
-      ' л браги. Заливайте не больше 75–80 % объёма — останется место под пену.');
-    r.warnings.forEach(function (w) { addNote(notes, w, 'warn'); });
+    addNote(notes, t('mash.note.capacity', { vol: nf1.format(r.volumeL) + ' ' + t('unit.l') }));
+    (r.warnings || []).forEach(function (key) { addNote(notes, t(key), 'warn'); });
   }
 
-  mInputs.forEach(function (el) {
+  [$('m-sugar'), $('m-water'), $('m-yeast'), $('m-temp')].forEach(function (el) {
     if (el) el.addEventListener('input', renderMash);
-  });
-
-  /* ------------------------------ сроки ------------------------------ */
-
-  var TIME_HINTS = {
-    bakery: 'Классика на прессованных или сухих хлебопекарных',
-    spirit: 'Рабочий вариант сахарной браги',
-    turbo: 'Самый быстрый путь, но следите за температурой',
-    grain: 'После осахаривания солодом или ферментами',
-    fruit: 'Дикие дрожжи: долго и непредсказуемо',
-    starch: 'Картофель и крахмал, нужна стабильная температура'
-  };
-
-  function renderTime() {
-    var yeast = $('t-yeast').value;
-    var tempC = readNumber($('t-temp'));
-    var notes = $('t-notes');
-    clearNotes(notes);
-
-    var days = Calc.fermentationDays(yeast, tempC);
-    $('t-range').innerHTML = days[0] + '–' + days[1] + '<small>дней</small>';
-    setText($('t-note'), tempC >= 22 && tempC <= 28 ? 'оптимальный режим' : 'с поправкой на температуру');
-    setText($('t-factor'), '×' + nf1.format(Calc.tempFactor(tempC)));
-
-    if (tempC < 18) addNote(notes, 'Ниже 18 °C брожение может встать. Утеплите ёмкость или перенесите в тёплое место.', 'warn');
-    if (tempC > 30) addNote(notes, 'Выше 30 °C дрожжи угнетены, растёт доля сивушных примесей.', 'warn');
-    addNote(notes, 'Срок — только ориентир. Готовность: газ не выделяется, брага осветлилась, вкус горький без сладости, ареометр показывает 0–1,5 % сахара.');
-
-    var tbody = $('t-table');
-    if (tbody) {
-      tbody.innerHTML = '';
-      Object.keys(Calc.FERMENT_BASE).forEach(function (key) {
-        var d = Calc.fermentationDays(key, tempC);
-        var tr = document.createElement('tr');
-        var td1 = document.createElement('td');
-        td1.textContent = Calc.FERMENT_LABELS[key];
-        var td2 = document.createElement('td');
-        td2.className = 'num';
-        td2.textContent = d[0] + '–' + d[1];
-        var td3 = document.createElement('td');
-        td3.textContent = TIME_HINTS[key] || '';
-        tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
-        if (key === yeast) tr.style.background = 'rgba(240,168,60,.06)';
-        tbody.appendChild(tr);
-      });
-    }
-  }
-
-  [$('t-yeast'), $('t-temp')].forEach(function (el) {
-    if (el) el.addEventListener('input', renderTime);
   });
 
   /* ------------------------------- Brix ------------------------------- */
 
   function renderBrix() {
-    var brix = readNumber($('b-brix'));
-    var volumeL = readNumber($('b-volume'));
+    var r = Calc.brixWash(readNumber($('b-brix')), readNumber($('b-volume')));
     var notes = $('b-notes');
     clearNotes(notes);
 
-    var r = Calc.brixWash(brix, volumeL);
-
     if (!r.ok) {
-      setText($('b-abv'), '—');
-      ['b-sg', 'b-perl', 'b-total', 'b-alcohol', 'b-spirit', 'b-hydro'].forEach(function (id) { setText($(id), '—'); });
-      addNote(notes, r.error, 'err');
+      resetCells(['b-abv', 'b-sg', 'b-perl', 'b-total', 'b-alcohol', 'b-spirit', 'b-hydro']);
+      addNote(notes, t(r.errorKey), 'err');
       return;
     }
 
-    $('b-abv').innerHTML = nf1.format(r.abv) + '<small>%</small>';
-    setText($('b-abv-note'), 'теоретический максимум, реально на 10–15 % ниже');
-    setText($('b-sg'), r.sg.toFixed(3));
-    setText($('b-perl'), nf.format(r.sugarPerL) + ' г/л');
-    setText($('b-total'), nf1.format(r.sugarKg) + ' кг');
-    setText($('b-alcohol'), nf1.format(r.alcoholL) + ' л');
-    setText($('b-spirit'), nf1.format(r.spirit40L) + ' л');
+    $('b-abv').innerHTML = bigValue(nf1.format(r.abv), '%');
+    setText($('b-sg'), nf3.format(r.sg));
+    setText($('b-perl'), nf.format(r.sugarPerL) + ' ' + t('unit.gpl'));
+    setText($('b-total'), nf1.format(r.sugarKg) + ' ' + t('unit.kg'));
+    setText($('b-alcohol'), nf1.format(r.alcoholL) + ' ' + t('unit.l'));
+    setText($('b-spirit'), nf1.format(r.spirit40L) + ' ' + t('unit.l'));
     setText($('b-hydro'), '1 : ' + nf1.format(r.hydro));
 
-    addNote(notes, 'Brix — массовая доля сахара в растворе, то есть сахаристость напрямую: ' +
-      nf1.format(r.sugarPct) + ' °Bx = ' + nf1.format(r.sugarPct) + ' % сахара.');
-    addNote(notes, 'Плотность сусла ' + r.sg.toFixed(3) + ' — по ней же можно сверять ареометр-сахаромер.');
-    r.warnings.forEach(function (w) { addNote(notes, w, 'warn'); });
+    addNote(notes, t('brix.note.direct', { b: nf1.format(r.sugarPct) }));
+    addNote(notes, t('brix.note.sg', { sg: nf3.format(r.sg) }));
+    (r.warnings || []).forEach(function (key) { addNote(notes, t(key), 'warn'); });
   }
 
   function renderFerment() {
-    var start = readNumber($('bf-start'));
-    var now = readNumber($('bf-now'));
+    var r = Calc.fermentationProgress(readNumber($('bf-start')), readNumber($('bf-now')));
     var notes = $('bf-notes');
     clearNotes(notes);
 
-    var r = Calc.fermentationProgress(start, now);
-
     if (!r.ok) {
-      setText($('bf-abv'), '—');
-      ['bf-sg', 'bf-sgstart', 'bf-residual', 'bf-residual-pct'].forEach(function (id) { setText($(id), '—'); });
+      resetCells(['bf-abv', 'bf-sg', 'bf-sgstart', 'bf-residual', 'bf-residual-pct']);
       setText($('bf-status'), '');
-      addNote(notes, r.error, 'err');
+      addNote(notes, t(r.errorKey), 'err');
       return;
     }
 
-    $('bf-abv').innerHTML = nf1.format(r.abv) + '<small>%</small>';
-    setText($('bf-status'), r.ready ? 'Сахар почти выбродил — можно перегонять' : 'Брожение ещё идёт');
-    setText($('bf-sg'), r.sgNow.toFixed(3));
-    setText($('bf-sgstart'), r.sgStart.toFixed(3));
-    setText($('bf-residual'), nf.format(r.residual) + ' г/л');
+    $('bf-abv').innerHTML = bigValue(nf1.format(r.abv), '%');
+    setText($('bf-status'), t(r.ready ? 'ferment.ready' : 'ferment.ongoing'));
+    setText($('bf-sg'), nf3.format(r.sgNow));
+    setText($('bf-sgstart'), nf3.format(r.sgStart));
+    setText($('bf-residual'), nf.format(r.residual) + ' ' + t('unit.gpl'));
     setText($('bf-residual-pct'), nf1.format(r.residualPct) + ' %');
 
-    addNote(notes, 'Спирт меняет коэффициент преломления, поэтому «сырой» текущий Brix занижает сахар. Здесь применена поправка Террилла: плотность считается по паре «начальный + текущий Brix».');
-    if (r.ready) addNote(notes, 'Остаточного сахара меньше 15 г/л. Подтвердите готовность: нет газа, брага осветлилась, вкус горький без сладости.');
-    r.warnings.forEach(function (w) { addNote(notes, w, 'warn'); });
+    addNote(notes, t('ferment.note.method'));
+    if (r.ready) addNote(notes, t('ferment.note.ready'));
+    (r.warnings || []).forEach(function (key) { addNote(notes, t(key), 'warn'); });
   }
 
   [$('b-brix'), $('b-volume')].forEach(function (el) {
@@ -267,36 +251,37 @@
   /* ----------------------------- фракции ----------------------------- */
 
   function renderFractions() {
-    var volumeL = readNumber($('f-volume'));
-    var volPct = readNumber($('f-pct'));
-    var headsPct = readNumber($('f-heads'));
-    var tailsPct = readNumber($('f-tails'));
+    var r = Calc.fractions(readNumber($('f-volume')), readNumber($('f-pct')),
+      readNumber($('f-heads')), readNumber($('f-tails')));
     var notes = $('f-notes');
     clearNotes(notes);
 
-    var r = Calc.fractions(volumeL, volPct, headsPct, tailsPct);
-
     if (!r.ok) {
-      setText($('f-heads-ml'), '—');
-      ['f-alcohol', 'f-heads-ac', 'f-body', 'f-tails-l', 'f-heads-strength'].forEach(function (id) { setText($(id), '—'); });
-      addNote(notes, r.error, 'err');
+      resetCells(['f-heads-ml', 'f-alcohol', 'f-heads-ac', 'f-body', 'f-tails-l', 'f-heads-strength']);
+      addNote(notes, t(r.errorKey), 'err');
       return;
     }
 
-    $('f-heads-ml').innerHTML = nf.format(r.heads.volumeL * 1000) + '<small>мл</small>';
-    setText($('f-heads-note'), 'при крепости голов ' + r.heads.strength + ' % об.');
-    setText($('f-alcohol'), nf1.format(r.alcoholL) + ' л');
-    setText($('f-heads-ac'), nf1.format(r.heads.alcoholL) + ' л');
-    setText($('f-body'), nf1.format(r.body.volumeL) + ' л');
-    setText($('f-tails-l'), nf1.format(r.tails.volumeL) + ' л');
+    $('f-heads-ml').innerHTML = bigValue(nf.format(r.heads.volumeL * 1000), t('unit.ml'));
+    setText($('f-heads-note'), t('frac.out.headsnote', { p: r.heads.strength + ' %' }));
+    setText($('f-alcohol'), nf1.format(r.alcoholL) + ' ' + t('unit.l'));
+    setText($('f-heads-ac'), nf1.format(r.heads.alcoholL) + ' ' + t('unit.l'));
+    setText($('f-body'), nf1.format(r.body.volumeL) + ' ' + t('unit.l'));
+    setText($('f-tails-l'), nf1.format(r.tails.volumeL) + ' ' + t('unit.l'));
     setText($('f-heads-strength'), r.heads.strength + ' %');
 
-    addNote(notes, 'Тело: ' + nf1.format(r.body.alcoholL) + ' л АС, примерно ' +
-      nf1.format(r.body.volumeL) + ' л при средней крепости ' + r.body.strength + ' %.');
-    addNote(notes, 'Хвосты: ' + nf1.format(r.tails.alcoholL) + ' л АС, примерно ' +
-      nf1.format(r.tails.volumeL) + ' л при ' + r.tails.strength + ' %. Их не выливают — добавляют в следующий перегон.');
-    addNote(notes, 'Головы отбирают по каплям, 1–2 капли в секунду, не смешивая с телом. Ориентир окончания тела — крепость в струе ниже 45 %.');
-    r.warnings.forEach(function (w) { addNote(notes, w, 'warn'); });
+    addNote(notes, t('frac.note.body', {
+      ac: nf1.format(r.body.alcoholL) + ' ' + t('unit.l'),
+      vol: nf1.format(r.body.volumeL) + ' ' + t('unit.l'),
+      p: r.body.strength + ' %'
+    }));
+    addNote(notes, t('frac.note.tails', {
+      ac: nf1.format(r.tails.alcoholL) + ' ' + t('unit.l'),
+      vol: nf1.format(r.tails.volumeL) + ' ' + t('unit.l'),
+      p: r.tails.strength + ' %'
+    }));
+    addNote(notes, t('frac.note.heads'));
+    (r.warnings || []).forEach(function (key) { addNote(notes, t(key), 'warn'); });
   }
 
   [$('f-volume'), $('f-pct'), $('f-heads'), $('f-tails')].forEach(function (el) {
@@ -310,48 +295,39 @@
   function renderThermo() {
     var pct = readNumber($('th-pct'));
     var tempC = readNumber($('th-temp'));
+    var r = Calc.correctTo20(pct, tempC);
     var notes = $('th-notes');
     clearNotes(notes);
 
-    var r = Calc.correctTo20(pct, tempC);
-
     if (!r.ok) {
-      setText($('th-true'), '—');
-      ['th-corr', 'th-density', 'th-coeff', 'th-delta'].forEach(function (id) { setText($(id), '—'); });
-      addNote(notes, r.error, 'err');
+      resetCells(['th-true', 'th-corr', 'th-density', 'th-coeff', 'th-delta']);
+      addNote(notes, t(r.errorKey), 'err');
       return;
     }
 
-    $('th-true').innerHTML = nf1.format(r.truePct) + '<small>%</small>';
+    $('th-true').innerHTML = bigValue(nf1.format(r.truePct), t('unit.pct'));
     setText($('th-note'), Math.abs(r.correction) < 0.05
-      ? 'замер при 20 °C — поправка не нужна'
-      : 'показание ' + nf1.format(pct) + ' % при ' + nf1.format(tempC) + ' °C');
+      ? t('thermo.note.exact')
+      : t('thermo.note.measured', { p: nf1.format(pct) + ' %', t: nf1.format(tempC) + ' °C' }));
     setText($('th-corr'), (r.correction > 0 ? '+' : '') + nf1.format(r.correction) + ' %');
-    setText($('th-density'), r.density20.toFixed(3));
+    setText($('th-density'), nf3.format(r.density20));
     setText($('th-coeff'), (r.ratePerC > 0 ? '+' : '') + nf.format(r.ratePerC) + ' %/°C');
     setText($('th-delta'), (tempC - 20 > 0 ? '+' : '') + nf1.format(tempC - 20) + ' °C');
 
-    addNote(notes, tempC > 20
-      ? 'Раствор теплее 20 °C: ареометр тонет глубже и показывает завышенную крепость. Истинное значение ниже показания.'
-      : tempC < 20
-        ? 'Раствор холоднее 20 °C: ареометр показывает заниженную крепость. Истинное значение выше показания.'
-        : 'Температура совпадает с калибровочной — поправка нулевая.');
+    addNote(notes, tempC > 20 ? t('thermo.note.warm') : tempC < 20 ? t('thermo.note.cold') : t('thermo.note.same'));
+    if (Math.abs(tempC - 20) > 5) addNote(notes, t('thermo.note.big'), 'warn');
+    (r.warnings || []).forEach(function (key) { addNote(notes, t(key), 'warn'); });
 
-    if (Math.abs(tempC - 20) > 5) {
-      addNote(notes, 'Отклонение больше 5 °C: поправка уже сравнима с точностью бытового ареометра. Дайте жидкости согреться/остыть до комнатной.', 'warn');
-    }
-    r.warnings.forEach(function (w) { addNote(notes, w, 'warn'); });
-
-    setText($('th-table-pct'), nf1.format(pct));
+    setText($('th-table-hint'), t('thermo.table.hint', { p: nf1.format(pct) + ' %' }));
     var tbody = $('th-table');
     if (tbody) {
       tbody.innerHTML = '';
-      THERMO_TEMPS.forEach(function (t) {
-        var row = Calc.correctTo20(pct, t);
+      THERMO_TEMPS.forEach(function (temp) {
+        var row = Calc.correctTo20(pct, temp);
         if (!row.ok) return;
         var tr = document.createElement('tr');
         var c1 = document.createElement('td');
-        c1.textContent = t + ' °C';
+        c1.textContent = temp + ' °C';
         var c2 = document.createElement('td');
         c2.className = 'num';
         c2.textContent = nf1.format(row.truePct) + ' %';
@@ -359,7 +335,7 @@
         c3.className = 'num';
         c3.textContent = (row.correction > 0 ? '+' : '') + nf1.format(row.correction) + ' %';
         tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3);
-        if (Math.abs(t - tempC) < 0.01) tr.style.background = 'rgba(240,168,60,.06)';
+        if (Math.abs(temp - tempC) < 0.01) tr.style.background = 'rgba(240,168,60,.06)';
         tbody.appendChild(tr);
       });
     }
@@ -369,13 +345,76 @@
     if (el) el.addEventListener('input', renderThermo);
   });
 
+  /* ------------------------------ сроки ------------------------------ */
+
+  function renderTime() {
+    var yeast = $('t-yeast').value;
+    var tempC = readNumber($('t-temp'));
+    var notes = $('t-notes');
+    clearNotes(notes);
+
+    var days = Calc.fermentationDays(yeast, tempC);
+    $('t-range').innerHTML = bigValue(days[0] + '–' + days[1], t('unit.days'));
+    setText($('t-note'), t(tempC >= 22 && tempC <= 28 ? 'time.note.opt' : 'time.note.adj'));
+    setText($('t-factor'), '×' + nf1.format(Calc.tempFactor(tempC)));
+
+    if (tempC < 18) addNote(notes, t('time.note.cold'), 'warn');
+    if (tempC > 30) addNote(notes, t('time.note.hot'), 'warn');
+    addNote(notes, t('time.note.ready'));
+
+    var tbody = $('t-table');
+    if (tbody) {
+      tbody.innerHTML = '';
+      Object.keys(Calc.FERMENT_BASE).forEach(function (key) {
+        var d = Calc.fermentationDays(key, tempC);
+        var tr = document.createElement('tr');
+        var td1 = document.createElement('td');
+        td1.textContent = t('crop.' + key);
+        var td2 = document.createElement('td');
+        td2.className = 'num';
+        td2.textContent = d[0] + '–' + d[1];
+        var td3 = document.createElement('td');
+        td3.textContent = t('crop.hint.' + key);
+        tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+        if (key === yeast) tr.style.background = 'rgba(240,168,60,.06)';
+        tbody.appendChild(tr);
+      });
+    }
+  }
+
+  [$('t-yeast'), $('t-temp')].forEach(function (el) {
+    if (el) el.addEventListener('input', renderTime);
+  });
+
+  /* ------------------------------ язык ------------------------------ */
+
+  function renderAll() {
+    renderDilute();
+    renderMash();
+    renderBrix();
+    renderFerment();
+    renderFractions();
+    renderThermo();
+    renderTime();
+  }
+
+  function setLang(next) {
+    if (LANGS.indexOf(next) < 0 || next === lang) return;
+    lang = next;
+    try { localStorage.setItem(LANG_KEY, lang); } catch (e) { /* игнорируем */ }
+    setFormatters();
+    applyStaticText();
+    renderAll();
+  }
+
+  var langSelect = $('lang-select');
+  if (langSelect) {
+    langSelect.value = lang;
+    langSelect.addEventListener('change', function () { setLang(langSelect.value); });
+  }
+
   /* ------------------------------ старт ------------------------------ */
 
-  renderDilute();
-  renderMash();
-  renderBrix();
-  renderFerment();
-  renderFractions();
-  renderThermo();
-  renderTime();
+  applyStaticText();
+  renderAll();
 })();

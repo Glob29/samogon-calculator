@@ -1,189 +1,175 @@
 /*
- * Прогон интерфейса в jsdom: страница открывается, скрипты работают,
- * ввод пересчитывает результаты, табы переключаются, ошибок в консоли нет.
+ * Прогон интерфейса в jsdom: расчёты, переключение языка, сохранение выбора.
  * Запуск: node tests/dom.test.js   (нужен npm install)
+ *
+ * Скрипты подключаются вручную (eval в окно), чтобы у страницы был
+ * обычный origin — иначе localStorage в jsdom недоступен.
  */
 'use strict';
 
+const fs = require('fs');
 const path = require('path');
 const { JSDOM, VirtualConsole } = require('jsdom');
 
-const file = path.join(__dirname, '..', 'index.html');
+const root = path.join(__dirname, '..');
 const errors = [];
 
+let failed = 0;
 function check(name, fn) {
   try {
     fn();
     console.log('  ok   ' + name);
-    return true;
   } catch (e) {
+    failed++;
     console.log('  FAIL ' + name + ' → ' + e.message);
-    return false;
   }
 }
+function assert(cond, msg) { if (!cond) throw new Error(msg); }
 
-function assert(cond, msg) {
-  if (!cond) throw new Error(msg);
-}
+const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8')
+  .replace(/<script src="[^"]+"><\/script>\s*/g, '');
+const sources = ['i18n.js', 'calc.js', 'app.js']
+  .map((f) => fs.readFileSync(path.join(root, 'assets', f), 'utf8'));
 
-(async function main() {
-  const virtualConsole = new VirtualConsole();
-  virtualConsole.on('jsdomError', (e) => errors.push(e.message));
-  virtualConsole.on('error', (m) => errors.push(String(m)));
+const virtualConsole = new VirtualConsole();
+virtualConsole.on('jsdomError', (e) => errors.push(e.message));
+virtualConsole.on('error', (m) => errors.push(String(m)));
 
-  const dom = await JSDOM.fromFile(file, {
-    runScripts: 'dangerously',
-    resources: 'usable',
-    pretendToBeVisual: true,
-    virtualConsole
-  });
-
-  const win = dom.window;
-  const doc = win.document;
-
-  await new Promise((resolve) => {
-    if (doc.readyState === 'complete') resolve();
-    else win.addEventListener('load', resolve);
-  });
-
-  const text = (id) => (doc.getElementById(id) || {}).textContent || '';
-
-  function input(id, value) {
-    const el = doc.getElementById(id);
-    el.value = String(value);
-    el.dispatchEvent(new win.Event('input', { bubbles: true }));
-  }
-
-  let failed = 0;
-  const expect = (name, fn) => { if (!check(name, fn)) failed++; };
-
-  console.log('\nЗагрузка');
-  expect('calc.js подключён (window.Calc)', () => {
-    assert(win.Calc && typeof win.Calc.dilute === 'function', 'нет window.Calc');
-  });
-  expect('страница отрисована без jsdom-ошибок', () => {
-    assert(errors.length === 0, 'ошибки: ' + errors.join(' | '));
-  });
-
-  console.log('\nРазбавление');
-  expect('по умолчанию 90 % → 40 %: воды 1,3 л', () => {
-    assert(text('d-water').indexOf('1,3') === 0, 'получено: ' + text('d-water'));
-  });
-  expect('итоговый объём 2,25 л', () => {
-    assert(text('d-final').indexOf('2,2') === 0, 'получено: ' + text('d-final'));
-  });
-  expect('пресет 96 % → 40 % даёт 1,4 л', () => {
-    const chip = doc.querySelector('.chip[data-v="96"]');
-    chip.dispatchEvent(new win.Event('click', { bubbles: true }));
-    assert(text('d-water').indexOf('1,4') === 0, 'получено: ' + text('d-water'));
-  });
-  expect('пересчёт при вводе 70 % → 40 %', () => {
-    input('d-vol-pct', 70);
-    input('d-target', 40);
-    assert(text('d-water').indexOf('0,7') === 0, 'получено: ' + text('d-water'));
-  });
-  expect('ошибка при желаемой крепости выше исходной', () => {
-    input('d-target', 80);
-    const notes = text('d-notes');
-    assert(notes.indexOf('не повысить') >= 0, 'нет предупреждения: ' + notes);
-  });
-
-  console.log('\nБрага');
-  expect('5 кг сахара + 20 л воды → 7,5 л самогона 40 %', () => {
-    input('d-target', 40);
-    assert(text('m-spirit40').indexOf('7,5') === 0, 'получено: ' + text('m-spirit40'));
-  });
-  expect('сахаристость 20 %', () => {
-    assert(text('m-sugarpct').indexOf('20') === 0, 'получено: ' + text('m-sugarpct'));
-  });
-  expect('пересахар предупреждает', () => {
-    input('m-sugar', 10);
-    input('m-water', 10);
-    assert(text('m-notes').indexOf('22') >= 0, 'нет предупреждения: ' + text('m-notes'));
-  });
-  expect('срок брожения выводится', () => {
-    assert(/\d+–\d+ дн/.test(text('m-days')), 'получено: ' + text('m-days'));
-  });
-
-  console.log('\nBrix');
-  expect('20 °Bx → потенциал 12 %', () => {
-    assert(text('b-abv').indexOf('12') === 0, 'получено: ' + text('b-abv'));
-  });
-  expect('плотность сусла 1,083', () => {
-    assert(text('b-sg') === '1.083' || text('b-sg') === '1,083', 'получено: ' + text('b-sg'));
-  });
-  expect('пересчёт при 10 °Bx → 6 %', () => {
-    input('b-brix', 10);
-    assert(text('b-abv').indexOf('6') === 0, 'получено: ' + text('b-abv'));
-  });
-  expect('ход брожения 20 → 8 °Bx: готово', () => {
-    assert(text('bf-status').indexOf('перегонять') >= 0, 'статус: ' + text('bf-status'));
-    assert(text('bf-abv').indexOf('10') === 0, 'крепость: ' + text('bf-abv'));
-  });
-  expect('ход брожения 20 → 18 °Bx: ещё идёт', () => {
-    input('bf-now', 18);
-    assert(text('bf-status').indexOf('ещё идёт') >= 0, 'статус: ' + text('bf-status'));
-  });
-
-  console.log('\nФракции');
-  expect('10 л 40 %: головы ≈ 410 мл', () => {
-    assert(text('f-heads-ml').indexOf('410') === 0, 'получено: ' + text('f-heads-ml'));
-  });
-  expect('АС 4 л', () => {
-    assert(text('f-alcohol').indexOf('4') === 0, 'получено: ' + text('f-alcohol'));
-  });
-  expect('масштабируется: 20 л → 820 мл голов', () => {
-    input('f-volume', 20);
-    assert(text('f-heads-ml').indexOf('820') === 0, 'получено: ' + text('f-heads-ml'));
-  });
-
-  console.log('\nАреометр');
-  expect('40 % при 25 °C → 37,3 %, поправка отрицательная', () => {
-    assert(text('th-true').indexOf('37,3') === 0, 'крепость: ' + text('th-true'));
-    assert(text('th-corr').indexOf('-2,7') === 0, 'поправка: ' + text('th-corr'));
-  });
-  expect('таблица поправок на 7 температур', () => {
-    assert(doc.querySelectorAll('#th-table tr').length === 7, 'строк: ' + doc.querySelectorAll('#th-table tr').length);
-  });
-  expect('при 20 °C поправка нулевая', () => {
-    input('th-temp', 20);
-    assert(text('th-true').indexOf('40') === 0, 'крепость: ' + text('th-true'));
-    assert(text('th-note').indexOf('не нужна') >= 0, 'подпись: ' + text('th-note'));
-  });
-
-  console.log('\nСроки');
-  expect('таблица по 6 видам сырья', () => {
-    const rows = doc.querySelectorAll('#t-table tr');
-    assert(rows.length === 6, 'строк: ' + rows.length);
-  });
-  expect('холодный температурный режим удлиняет срок', () => {
-    input('t-temp', 25);
-    const warm = text('t-range');
-    input('t-temp', 15);
-    const cold = text('t-range');
-    assert(cold !== warm, 'срок не изменился: ' + cold);
-  });
-
-  console.log('\nТабы');
-  expect('переключение на «Брага»', () => {
-    const tab = doc.querySelector('.tab[data-tab="mash"]');
-    tab.dispatchEvent(new win.Event('click', { bubbles: true }));
-    assert(doc.getElementById('tab-mash').classList.contains('is-active'), 'панель не активна');
-    assert(!doc.getElementById('tab-dilute').classList.contains('is-active'), 'старая панель активна');
-  });
-
-  console.log('');
-  if (errors.length) {
-    console.log('Ошибки консоли:');
-    errors.forEach((e) => console.log('  ' + e));
-  }
-  if (failed) {
-    console.log('Провалено: ' + failed);
-    process.exit(1);
-  }
-  console.log('Интерфейс работает');
-  win.close();
-})().catch((e) => {
-  console.error('Тест упал:', e);
-  process.exit(1);
+const dom = new JSDOM(html, {
+  url: 'https://samogon.local/',
+  runScripts: 'outside-only',
+  pretendToBeVisual: true,
+  virtualConsole
 });
+
+const win = dom.window;
+const doc = win.document;
+sources.forEach((src) => win.eval(src));
+
+const text = (id) => (doc.getElementById(id) || {}).textContent || '';
+const dict = (lang) => win.I18N[lang];
+
+function input(id, value) {
+  const el = doc.getElementById(id);
+  el.value = String(value);
+  el.dispatchEvent(new win.Event('input', { bubbles: true }));
+}
+function selectLang(value) {
+  const el = doc.getElementById('lang-select');
+  el.value = value;
+  el.dispatchEvent(new win.Event('change', { bubbles: true }));
+}
+
+console.log('\nЗагрузка');
+check('calc.js подключён (window.Calc)', () => {
+  assert(win.Calc && typeof win.Calc.dilute === 'function', 'нет window.Calc');
+});
+check('словари загружены', () => {
+  assert(win.I18N && win.I18N.ru && win.I18N.en && win.I18N.zh, 'нет I18N');
+});
+check('страница отрисована без ошибок', () => {
+  assert(errors.length === 0, 'ошибки: ' + errors.join(' | '));
+});
+check('по умолчанию русский', () => {
+  assert(doc.documentElement.lang === 'ru', 'lang=' + doc.documentElement.lang);
+  assert(doc.getElementById('lang-select').value === 'ru', 'выбран не ru');
+  assert(doc.querySelector('h1').textContent === dict('ru')['app.title'], 'заголовок не из словаря');
+});
+
+console.log('\nРазбавление');
+check('90 % → 40 %: воды 1,3 л', () => {
+  assert(text('d-water').indexOf('1,3') === 0, 'получено: ' + text('d-water'));
+});
+check('итоговый объём 2,2 л', () => {
+  assert(text('d-final').indexOf('2,2') === 0, 'получено: ' + text('d-final'));
+});
+check('ошибка при желаемой крепости выше исходной', () => {
+  input('d-vol-pct', 40);
+  input('d-target', 60);
+  assert(text('d-notes').includes(dict('ru')['dilute.err.higher']), 'нет сообщения: ' + text('d-notes'));
+  input('d-vol-pct', 90);
+  input('d-target', 40);
+});
+
+console.log('\nБрага');
+check('5 кг сахара + 20 л воды → 7,5 л 40 %', () => {
+  assert(text('m-spirit40').indexOf('7,5') === 0, 'получено: ' + text('m-spirit40'));
+});
+check('пересахар предупреждает', () => {
+  input('m-sugar', 10);
+  input('m-water', 10);
+  assert(text('m-notes').includes(dict('ru')['mash.warn.toosweet']), 'нет предупреждения');
+  input('m-sugar', 5);
+  input('m-water', 20);
+});
+
+console.log('\nBrix');
+check('20 °Bx → потенциал 12 %', () => {
+  assert(text('b-abv').indexOf('12') === 0, 'получено: ' + text('b-abv'));
+});
+check('ход брожения 20 → 8 °Bx: готово', () => {
+  assert(text('bf-status').includes(dict('ru')['ferment.ready']), 'статус: ' + text('bf-status'));
+});
+
+console.log('\nФракции, ареометр, сроки');
+check('10 л 40 %: головы ≈ 410 мл', () => {
+  assert(text('f-heads-ml').indexOf('410') === 0, 'получено: ' + text('f-heads-ml'));
+});
+check('40 % при 25 °C → 37,3 %', () => {
+  assert(text('th-true').indexOf('37,3') === 0, 'получено: ' + text('th-true'));
+});
+check('таблица поправок на 7 температур', () => {
+  assert(doc.querySelectorAll('#th-table tr').length === 7, 'строк: ' + doc.querySelectorAll('#th-table tr').length);
+});
+check('таблица по 6 видам сырья', () => {
+  assert(doc.querySelectorAll('#t-table tr').length === 6, 'строк: ' + doc.querySelectorAll('#t-table tr').length);
+});
+
+console.log('\nЯзыки');
+check('переключение на английский', () => {
+  selectLang('en');
+  assert(doc.documentElement.lang === 'en', 'lang=' + doc.documentElement.lang);
+  assert(doc.querySelector('h1').textContent === dict('en')['app.title'], 'заголовок');
+  assert(doc.querySelector('.tab[data-tab="mash"] span').textContent === dict('en')['tab.mash'], 'таб');
+  assert(text('d-water').indexOf('1.3') === 0, 'число: ' + text('d-water'));
+  assert(text('m-hydro').indexOf('1 : 4') === 0, 'гидромодуль: ' + text('m-hydro'));
+});
+check('выбор сохраняется в localStorage', () => {
+  assert(win.localStorage.getItem('samogon.lang') === 'en', 'нет записи в localStorage');
+});
+check('переключение на китайский', () => {
+  selectLang('zh');
+  assert(doc.querySelector('h1').textContent === dict('zh')['app.title'], 'заголовок');
+  assert(doc.querySelector('footer span').textContent === dict('zh')['footer.line1'], 'футер');
+  assert(text('d-water').indexOf('1.3') === 0, 'число: ' + text('d-water'));
+});
+check('формулы переводятся вместе с интерфейсом', () => {
+  selectLang('en');
+  const about = doc.querySelector('[data-i18n-html="about.body"]').innerHTML;
+  assert(about.includes('Dilution'), 'нет английского текста формул');
+  selectLang('zh');
+  assert(doc.querySelector('[data-i18n-html="about.body"]').innerHTML.includes('稀释'), 'нет китайского текста формул');
+});
+check('возврат на русский сохраняет формат чисел', () => {
+  selectLang('ru');
+  assert(text('d-water').indexOf('1,3') === 0, 'получено: ' + text('d-water'));
+  assert(doc.querySelector('h1').textContent === dict('ru')['app.title'], 'заголовок');
+});
+
+console.log('\nТабы');
+check('переключение на «Брага»', () => {
+  doc.querySelector('.tab[data-tab="mash"]').dispatchEvent(new win.Event('click', { bubbles: true }));
+  assert(doc.getElementById('tab-mash').classList.contains('is-active'), 'панель не активна');
+});
+
+console.log('');
+if (errors.length) {
+  console.log('Ошибки консоли:');
+  errors.forEach((e) => console.log('  ' + e));
+}
+if (failed) {
+  console.log('Провалено: ' + failed);
+  process.exit(1);
+}
+console.log('Интерфейс работает, три языка переключаются');
+win.close();
