@@ -36,7 +36,7 @@
 
 Плюс русские страницы без пары: `kalkulyator-samogonshchika.html`, `tablica-razbavleniya-samogona.html`, `sroki-brozheniya-bragi.html`.
 
-И английские без пары: `proofing-calculator`, `alcohol-dilution-chart`, `dilute-96-alcohol-to-40`, `abv-to-proof-conversion`, `how-much-foreshots-to-discard`, `brix-to-specific-gravity`, `sugar-wash-ratio-1-4`, `hydrometer-temperature-correction`, `moonshine-calculator` (все в `en/`).
+Испанские страницы: s/diluir-alcohol-90-a-40.html, s/azucar-para-20-litros-de-mostro.html, s/brix-tabla-densidad-alcohol.html, s/cuantas-cabezas-y-colas-separar.html. `proofing-calculator`, `alcohol-dilution-chart`, `dilute-96-alcohol-to-40`, `abv-to-proof-conversion`, `how-much-foreshots-to-discard`, `brix-to-specific-gravity`, `sugar-wash-ratio-1-4`, `hydrometer-temperature-correction`, `moonshine-calculator` (все в `en/`).
 
 План выхода на русскоязычную аудиторию СНГ — в [docs/launch-cis.md](docs/launch-cis.md), готовые тексты для рассылки — в [docs/posts.md](docs/posts.md).
 

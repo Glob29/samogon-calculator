@@ -35,6 +35,15 @@ const LANGS = [
     htmlLang: 'de',
     brand: 'Schnapsbrenner-Rechner',
     faq: 'Häufige Fragen'
+  },
+  {
+    code: 'es',
+    dir: 'es',
+    files: ['content/seo-pages.es.js'],
+    label: 'Español',
+    htmlLang: 'es',
+    brand: 'Calculadora del destilador',
+    faq: 'Preguntas frecuentes'
   }
 ];
 
