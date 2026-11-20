@@ -85,21 +85,20 @@ check('canonical на главной', () => {
 });
 
 console.log('\nГруппы переводов');
-check('русские темы имеют английскую пару', () => {
-  const ruEntries = entries.filter((e) => e.lang.code === 'ru');
-  assert(ruEntries.length === 4, 'русских страниц: ' + ruEntries.length);
-  ruEntries.forEach((e) => {
-    const group = byId[e.id] || [];
-    const langs = group.map((x) => x.lang.code).sort().join(',');
-    assert(langs === 'en,ru', e.id + ': переводы ' + langs);
+check('базовые темы имеют русскую и английскую пару', () => {
+  const paired = Object.keys(byId).filter((id) => byId[id].length === 2);
+  assert(paired.length === 4, 'страниц с парой: ' + paired.length);
+  paired.forEach((id) => {
+    const langs = byId[id].map((x) => x.lang.code).sort().join(',');
+    assert(langs === 'en,ru', id + ': переводы ' + langs);
   });
 });
-check('английские страницы без пары допустимы', () => {
-  const onlyEn = Object.keys(byId).filter((id) => byId[id].length === 1 && byId[id][0].lang.code === 'en');
-  assert(onlyEn.length >= 8, 'английских страниц без пары: ' + onlyEn.length);
+check('одноязычные страницы тоже допустимы', () => {
+  const single = Object.keys(byId).filter((id) => byId[id].length === 1);
+  assert(single.length === 12, 'одноязычных: ' + single.length);
 });
-check('всего страниц: 4 русских + 13 английских', () => {
-  assert(entries.length === 17, 'страниц: ' + entries.length);
+check('всего страниц: 7 русских + 13 английских', () => {
+  assert(entries.length === 20, 'страниц: ' + entries.length);
 });
 
 console.log('\nПосадочные страницы');

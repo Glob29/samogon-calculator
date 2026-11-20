@@ -34,6 +34,12 @@
 | `brix-tablica.html` | `en/brix-to-density-and-alcohol.html` |
 | `golovy-i-hvosty.html` | `en/how-much-heads-and-tails-to-collect.html` |
 
+Плюс русские страницы без пары: `kalkulyator-samogonshchika.html`, `tablica-razbavleniya-samogona.html`, `sroki-brozheniya-bragi.html`.
+
+И английские без пары: `proofing-calculator`, `alcohol-dilution-chart`, `dilute-96-alcohol-to-40`, `abv-to-proof-conversion`, `how-much-foreshots-to-discard`, `brix-to-specific-gravity`, `sugar-wash-ratio-1-4`, `hydrometer-temperature-correction`, `moonshine-calculator` (все в `en/`).
+
+План выхода на русскоязычную аудиторию СНГ — в [docs/launch-cis.md](docs/launch-cis.md).
+
 Переводы связаны тегом `hreflang` (плюс `x-default`), на каждой странице есть переключатель языка. Английская страница открывает приложение сразу на английском (`window.SEO_LANG`).
 
 ```
