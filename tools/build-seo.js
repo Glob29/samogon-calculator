@@ -92,6 +92,8 @@ pages.forEach(function (p) {
   html = html.replace(/<title>[^<]*<\/title>/, '<title>' + esc(p.title) + '</title>');
   html = html.replace(/<meta name="description" content="[^"]*">/,
     '<meta name="description" content="' + esc(p.description) + '">');
+  // убираем canonical главной страницы, иначе у страницы окажется два canonical
+  html = html.replace(/\s*<link rel="canonical" href="[^"]*">/, '');
   html = html.replace('</head>', headExtra(p) + '\n</head>');
 
   // В шапке h1 заменяем ссылкой на главную — единственный h1 остаётся в статье

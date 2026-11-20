@@ -78,6 +78,8 @@ pages.forEach((p) => {
   check(file + ': заголовок, canonical и один h1', () => {
     const html = read(file);
     assert(html.includes('<title>' + p.title.replace(/&/g, '&amp;') + '</title>'), 'не тот title');
+    const canonicals = html.match(/rel="canonical"/g) || [];
+    assert(canonicals.length === 1, 'canonical-тегов: ' + canonicals.length + ' (должен быть один)');
     assert(html.includes('rel="canonical" href="' + BASE + file + '"'), 'не тот canonical');
     const h1 = (html.match(/<h1[\s>]/g) || []).length;
     assert(h1 === 1, 'h1 найдено: ' + h1);
