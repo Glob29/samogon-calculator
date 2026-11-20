@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://glob29.github.io/samogon-calculator/sitemap.xml

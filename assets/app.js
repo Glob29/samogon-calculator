@@ -110,14 +110,35 @@
   /* ------------------------------ табы ------------------------------ */
 
   var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+
+  function activateTab(name) {
+    tabs.forEach(function (t2) { t2.classList.toggle('is-active', t2.getAttribute('data-tab') === name); });
+    Array.prototype.forEach.call(document.querySelectorAll('.panel'), function (p) {
+      p.classList.toggle('is-active', p.id === 'tab-' + name);
+    });
+  }
+
   tabs.forEach(function (tab) {
     tab.addEventListener('click', function () {
       var name = tab.getAttribute('data-tab');
-      tabs.forEach(function (t2) { t2.classList.toggle('is-active', t2 === tab); });
-      Array.prototype.forEach.call(document.querySelectorAll('.panel'), function (p) {
-        p.classList.toggle('is-active', p.id === 'tab-' + name);
-      });
+      activateTab(name);
+      if (window.track) window.track('tool_open', { tool: name });
     });
+  });
+
+  /* Событие «калькулятор реально использовали» — не чаще раза в 30 с на инструмент. */
+  var lastUsed = {};
+  function trackUse(tool) {
+    var now = Date.now();
+    if (lastUsed[tool] && now - lastUsed[tool] < 30000) return;
+    lastUsed[tool] = now;
+    if (window.track) window.track('calc_used', { tool: tool });
+  }
+
+  document.addEventListener('input', function (e) {
+    var panel = e.target && e.target.closest ? e.target.closest('.panel') : null;
+    if (!panel) return;
+    trackUse(panel.id.replace('tab-', ''));
   });
 
   /* --------------------------- разбавление --------------------------- */
@@ -157,6 +178,9 @@
       $('d-vol-pct').value = btn.getAttribute('data-v');
       $('d-volume').value = btn.getAttribute('data-o');
       $('d-target').value = btn.getAttribute('data-t');
+      if (window.track) {
+        window.track('preset_use', { preset: btn.getAttribute('data-v') + '-' + btn.getAttribute('data-t') });
+      }
       renderDilute();
     });
   }
@@ -405,6 +429,7 @@
     setFormatters();
     applyStaticText();
     renderAll();
+    if (window.track) window.track('lang_change', { lang: lang });
   }
 
   var langSelect = $('lang-select');
@@ -415,6 +440,35 @@
 
   /* ------------------------------ старт ------------------------------ */
 
+  var supportLink = $('support-link');
+  if (supportLink) {
+    supportLink.addEventListener('click', function () {
+      if (window.track) window.track('support_click');
+    });
+  }
+
   applyStaticText();
+
+  // Предзаполнение из посадочной страницы или ?tab= (ярлыки приложения)
+  var preset = window.SEO_PRESET;
+  if (preset && preset.values) {
+    Object.keys(preset.values).forEach(function (id) {
+      var el = $(id);
+      if (el) el.value = preset.values[id];
+    });
+  }
+  var initialTab = (preset && preset.tab) || null;
+  if (!initialTab) {
+    try { initialTab = new URLSearchParams(location.search).get('tab'); } catch (e) { initialTab = null; }
+  }
+  if (initialTab) activateTab(initialTab);
+
   renderAll();
+
+  // Офлайн-режим: регистрируем service worker только на http(s), на file:// он запрещён
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () { /* без офлайна страница тоже работает */ });
+    });
+  }
 })();

@@ -1,0 +1,25 @@
+{
+  "name": "Калькулятор самогонщика",
+  "short_name": "Самогон",
+  "description": "Разбавление спирта с учётом контракции, сахаристость браги, Brix, головы и хвосты, поправка ареометра на температуру.",
+  "lang": "ru",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0d0f13",
+  "theme_color": "#0d0f13",
+  "categories": ["utilities", "food", "productivity"],
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icon-256.png", "sizes": "256x256", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Разбавление", "url": "./?tab=dilute" },
+    { "name": "Брага", "url": "./?tab=mash" },
+    { "name": "Ареометр", "url": "./?tab=thermo" }
+  ]
+}

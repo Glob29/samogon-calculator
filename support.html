@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Поддержать проект — Калькулятор самогонщика</title>
+<meta name="description" content="Поддержать бесплатный калькулятор самогонщика: донат, реквизиты, партнёрские ссылки на оборудование.">
+<meta name="theme-color" content="#0d0f13">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#1a1206" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 3h6"/>
+          <path d="M10 3v5.2a5 5 0 0 0-.7 1.1L5.7 17a3 3 0 0 0 2.6 4.5h7.4a3 3 0 0 0 2.6-4.5l-3.6-7.7a5 5 0 0 0-.7-1.1V3"/>
+          <path d="M7.5 15h9"/>
+        </svg>
+      </div>
+      <div>
+        <a class="brand-title" href="./">Калькулятор самогонщика</a>
+        <p class="sub">Бесплатно, без рекламы и регистрации</p>
+      </div>
+    </div>
+    <span class="badge-18">18+</span>
+  </header>
+
+  <main>
+    <article class="seo-article">
+      <h1>Поддержать проект</h1>
+      <p class="lead">Калькулятор был и остаётся бесплатным: без рекламных баннеров, без регистрации, без платных «премиум-функций» за базовые расчёты. Код открыт под лицензией MIT. Если инструмент сэкономил вам время и продукт — можно отблагодарить автора.</p>
+    </article>
+
+    <div class="card">
+      <h2>Донат</h2>
+      <div class="prose">
+        <p>Любая сумма, разово или ежемесячно. Деньги идут на домен, хостинг и время на новые калькуляторы.</p>
+        <ul>
+          <li><strong>Boosty</strong> — <code>https://boosty.to/ВАШ_АККАУНТ</code> <span class="muted">(замените на свою ссылку)</span></li>
+          <li><strong>ЮMoney</strong> — <code>4100 0000 0000 000</code> <span class="muted">(замените на свой кошелёк)</span></li>
+          <li><strong>GitHub Sponsors</strong> — для тех, кто пришёл из репозитория</li>
+        </ul>
+        <p class="muted">Пока реквизиты — заглушки: подставьте свои в этом файле (support.html) и запушьте.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Чем ещё можно помочь бесплатно</h2>
+      <div class="prose">
+        <ul>
+          <li>Рассказать о калькуляторе в профильном сообществе или чате.</li>
+          <li>Прислать скриншот с ошибкой в расчёте — это ценнее денег.</li>
+          <li>Поправить перевод: английский и китайский я делал сам, а терминология в нише различается.</li>
+          <li>Поставить звезду репозиторию — по ней проект находят.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Партнёрские ссылки</h2>
+      <div class="prose">
+        <p>Когда появятся — здесь будет пометка «реклама» согласно закону. Сейчас ссылок нет: сначала нужно набрать аудиторию, которой эти ссылки будут полезны.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <a class="link" href="./">← Вернуться к калькулятору</a>
+    <div class="disclaimer">18+ · Чрезмерное употребление алкоголя вредит вашему здоровью.</div>
+  </footer>
+
+</div>
+<script src="assets/analytics.js"></script>
+<script>
+  document.querySelectorAll('a, button').forEach(function (el) {
+    el.addEventListener('click', function () {
+      if (window.track) window.track('support_nav', { target: el.textContent.trim().slice(0, 40) });
+    });
+  });
+</script>
+</body>
+</html>

@@ -8,7 +8,10 @@
 <meta name="theme-color" content="#0d0f13">
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/icon-256.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="canonical" href="https://glob29.github.io/samogon-calculator/">
 <link rel="stylesheet" href="assets/style.css">
+<script>window.SAMOGON_CONFIG = { ymId: null, debug: false };</script>
 </head>
 <body>
 <div class="app">
@@ -396,12 +399,16 @@
   <footer>
     <span data-i18n="footer.line1">Калькулятор самогонщика · работает офлайн, данные никуда не отправляются</span><br>
     <span data-i18n="footer.line2">Расчёты ориентировочные: проверяйте крепость ареометром при 20 °C</span>
+    <div class="footer-links">
+      <a class="link" href="support.html" id="support-link">Поддержать проект</a>
+    </div>
     <div class="disclaimer" data-i18n="footer.disclaimer">18+ · Чрезмерное употребление алкоголя вредит вашему здоровью.</div>
   </footer>
 
 </div>
 
 <script src="assets/i18n.js"></script>
+<script src="assets/analytics.js"></script>
 <script src="assets/calc.js"></script>
 <script src="assets/app.js"></script>
 </body>

@@ -273,8 +273,10 @@ def main():
     render_png(256).save(ASSETS / "icon-256.png")
     render_png(64).save(ASSETS / "icon-64.png")
     render_png(32).save(ASSETS / "icon-32.png")
+    render_png(192).save(ASSETS / "icon-192.png")
+    render_png(512).save(ASSETS / "icon-512.png")
     ico = save_ico()
-    for f in ("icon.svg", "icon-256.png", "icon-64.png", "icon-32.png", ico.name):
+    for f in ("icon.svg", "icon-256.png", "icon-512.png", "icon-192.png", "icon-64.png", "icon-32.png", ico.name):
         p = ASSETS / f
         print(f"{p.name:14} {p.stat().st_size:>7} байт")
 

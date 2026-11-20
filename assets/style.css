@@ -444,3 +444,65 @@ footer {
   color: #c9a1a1;
   font-size: .8rem;
 }
+
+
+/* ---------- лендинги, статьи, страница поддержки ---------- */
+
+.brand-title {
+  display: block;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.brand-title:hover { color: var(--accent); }
+
+.seo-article { margin: 0 0 18px; }
+
+.seo-article h1 {
+  font-size: 1.6rem;
+  line-height: 1.25;
+  margin: 0 0 10px;
+  letter-spacing: -.02em;
+}
+
+.seo-article .lead {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.seo-article--outro {
+  margin-top: 26px;
+  background: linear-gradient(180deg, var(--card-2), var(--card));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+.seo-article h2 { font-size: 1.05rem; margin: 22px 0 8px; }
+.seo-article h2:first-child { margin-top: 0; }
+.seo-article p { color: var(--muted); margin: 0 0 12px; }
+.seo-article ul,
+.seo-article ol { color: var(--muted); margin: 0 0 12px; padding-left: 22px; }
+.seo-article li { margin-bottom: 6px; }
+.seo-article code {
+  background: #0f1319;
+  border: 1px solid var(--line);
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: .86em;
+  color: #e7c187;
+}
+
+.faq { border-top: 1px solid var(--line); padding: 12px 0; }
+.faq:last-child { border-bottom: 1px solid var(--line); }
+.faq summary { cursor: pointer; font-weight: 600; color: var(--text); }
+.faq p { margin: 8px 0 0; }
+
+.muted { color: #6f7a8a; font-size: .82rem; }
+.link { color: var(--accent); text-decoration: none; }
+.link:hover { text-decoration: underline; }
