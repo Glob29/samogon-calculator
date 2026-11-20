@@ -25,13 +25,22 @@
 | `brix-tablica.html` | Brix для браги, перевод в плотность |
 | `golovy-i-hvosty.html` | сколько отбирать голов и хвостов |
 
-Страницы генерируются из `content/seo-pages.js`:
+Страницы генерируются из `content/seo-pages.js` (русский) и `content/seo-pages.en.js` (английский):
+
+| Русская | Английская |
+|---|---|
+| `razbavit-spirt-90-do-40.html` | `en/dilute-alcohol-90-to-40.html` |
+| `skolko-sahara-na-20-litrov-vody.html` | `en/how-much-sugar-for-20-litres-of-wash.html` |
+| `brix-tablica.html` | `en/brix-to-density-and-alcohol.html` |
+| `golovy-i-hvosty.html` | `en/how-much-heads-and-tails-to-collect.html` |
+
+Переводы связаны тегом `hreflang` (плюс `x-default`), на каждой странице есть переключатель языка. Английская страница открывает приложение сразу на английском (`window.SEO_LANG`).
 
 ```
 npm run build:seo     # или node tools/build-seo.js
 ```
 
-Скрипт собирает `*.html`, `sitemap.xml` и `robots.txt`. Добавили запись в `content/seo-pages.js` — перезапустили, страница появилась.
+Скрипт собирает `*.html`, `en/*.html`, `sitemap.xml` и `robots.txt`. Добавили запись в `content/` — перезапустили, страница появилась.
 
 ## Установка на телефон и офлайн
 

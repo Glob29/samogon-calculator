@@ -156,6 +156,36 @@ check('возврат на русский сохраняет формат чис
   assert(doc.querySelector('h1').textContent === dict('ru')['app.title'], 'заголовок');
 });
 
+console.log('\nАнглийская посадочная страница');
+check('открывается на английском и с предзаполнением', () => {
+  const enFile = path.join(root, 'en', 'dilute-alcohol-90-to-40.html');
+  const enHtml = fs.readFileSync(enFile, 'utf8');
+  const inline = [...enHtml.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
+
+  const cleaned = enHtml
+    .replace(/<script src="[^"]+"><\/script>\s*/g, '')
+    .replace(/<script>[\s\S]*?<\/script>/g, '');
+
+  const enDom = new JSDOM(cleaned, {
+    url: 'https://samogon.local/en/dilute-alcohol-90-to-40.html',
+    runScripts: 'outside-only',
+    pretendToBeVisual: true,
+    virtualConsole
+  });
+
+  inline.forEach((src) => enDom.window.eval(src));
+  sources.forEach((src) => enDom.window.eval(src));
+
+  const d = enDom.window.document;
+  assert(d.getElementById('lang-select').value === 'en', 'язык: ' + d.getElementById('lang-select').value);
+  assert(d.getElementById('d-vol-pct').value === '90', 'нет предзаполнения крепости');
+  assert(d.getElementById('tab-dilute').classList.contains('is-active'), 'открыта не та вкладка');
+  const water = d.getElementById('d-water').textContent;
+  assert(water.indexOf('1.3') === 0, 'расчёт не выполнился: ' + water);
+  assert(d.querySelector('h1').textContent.length > 5, 'нет заголовка статьи');
+  enDom.window.close();
+});
+
 console.log('\nТабы');
 check('переключение на «Брага»', () => {
   doc.querySelector('.tab[data-tab="mash"]').dispatchEvent(new win.Event('click', { bubbles: true }));

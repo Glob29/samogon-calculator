@@ -506,3 +506,19 @@ footer {
 .muted { color: #6f7a8a; font-size: .82rem; }
 .link { color: var(--accent); text-decoration: none; }
 .link:hover { text-decoration: underline; }
+
+
+.lang-links {
+  margin: 0 0 10px;
+  font-size: .85rem;
+  color: var(--muted);
+}
+
+.lang-links a {
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(255, 255, 255, .22);
+}
+
+.lang-links a:hover { color: var(--accent); border-color: var(--accent); }
+.lang-links .sep { opacity: .35; margin: 0 4px; }

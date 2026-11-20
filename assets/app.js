@@ -12,10 +12,14 @@
   var LANG_KEY = 'samogon.lang';
 
   var lang = 'ru';
+  var seoLang = (window.SEO_LANG && LANGS.indexOf(window.SEO_LANG) >= 0) ? window.SEO_LANG : null;
   try {
     var savedLang = localStorage.getItem(LANG_KEY);
     if (LANGS.indexOf(savedLang) >= 0) lang = savedLang;
-  } catch (e) { /* localStorage может быть недоступен */ }
+    else if (seoLang) lang = seoLang;
+  } catch (e) {
+    if (seoLang) lang = seoLang;
+  }
 
   var nf, nf1, nf3;
 
@@ -468,7 +472,14 @@
   // Офлайн-режим: регистрируем service worker только на http(s), на file:// он запрещён
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('sw.js').catch(function () { /* без офлайна страница тоже работает */ });
+      // на страницах в подпапках (/en/) путь берём из адреса самого app.js
+      var base = './';
+      var scripts = document.getElementsByTagName('script');
+      for (var i = 0; i < scripts.length; i++) {
+        var src = scripts[i].getAttribute('src') || '';
+        if (src.indexOf('assets/app.js') >= 0) base = src.replace(/assets\/app\.js.*$/, '');
+      }
+      navigator.serviceWorker.register(base + 'sw.js').catch(function () { /* без офлайна страница тоже работает */ });
     });
   }
 })();

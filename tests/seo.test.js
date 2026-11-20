@@ -1,5 +1,5 @@
 /*
- * Проверка посадочных страниц, PWA и разметки для поисковиков.
+ * Проверка посадочных страниц (все языки), PWA и разметки для поисковиков.
  * Запуск: node tests/seo.test.js
  */
 'use strict';
@@ -9,7 +9,21 @@ const path = require('path');
 
 const root = path.join(__dirname, '..');
 const BASE = 'https://glob29.github.io/samogon-calculator/';
-const pages = require(path.join(root, 'content', 'seo-pages.js'));
+
+const LANGS = [
+  { code: 'ru', dir: '', file: 'content/seo-pages.js', htmlLang: 'ru' },
+  { code: 'en', dir: 'en', file: 'content/seo-pages.en.js', htmlLang: 'en' }
+];
+
+const entries = [];
+LANGS.forEach((lang) => {
+  const file = path.join(root, lang.file);
+  if (!fs.existsSync(file)) return;
+  require(file).forEach((page) => entries.push({ lang, page, id: page.id || page.slug }));
+});
+
+const byId = {};
+entries.forEach((e) => { (byId[e.id] = byId[e.id] || []).push(e); });
 
 let failed = 0;
 function check(name, fn) {
@@ -24,6 +38,8 @@ function check(name, fn) {
 function assert(cond, msg) { if (!cond) throw new Error(msg); }
 
 const read = (f) => fs.readFileSync(path.join(root, f), 'utf8');
+const fileFor = (e) => (e.lang.dir ? e.lang.dir + '/' : '') + e.page.slug + '.html';
+const urlFor = (e) => BASE + fileFor(e);
 
 console.log('\nPWA');
 check('manifest.webmanifest — валидный JSON', () => {
@@ -35,9 +51,7 @@ check('в манифесте есть иконки 192 и 512', () => {
   const sizes = m.icons.map((i) => i.sizes);
   assert(sizes.includes('192x192'), 'нет 192x192');
   assert(sizes.includes('512x512'), 'нет 512x512');
-  m.icons.forEach((i) => {
-    assert(fs.existsSync(path.join(root, i.src)), 'нет файла ' + i.src);
-  });
+  m.icons.forEach((i) => assert(fs.existsSync(path.join(root, i.src)), 'нет файла ' + i.src));
 });
 check('есть maskable-иконка', () => {
   const m = JSON.parse(read('manifest.webmanifest'));
@@ -51,48 +65,70 @@ check('sw.js кеширует основные файлы', () => {
 
 console.log('\nПодключение в index.html');
 const index = read('index.html');
-check('манифест подключён', () => {
-  assert(index.includes('rel="manifest"'), 'нет <link rel="manifest">');
-});
+check('манифест подключён', () => assert(index.includes('rel="manifest"'), 'нет манифеста'));
 check('аналитика подключена до app.js', () => {
   const a = index.indexOf('assets/analytics.js');
   const b = index.indexOf('assets/app.js');
   assert(a > 0 && a < b, 'analytics.js должен идти до app.js');
 });
-check('есть конфиг счётчика', () => {
-  assert(index.includes('window.SAMOGON_CONFIG'), 'нет SAMOGON_CONFIG');
-});
-check('есть ссылка на страницу поддержки', () => {
-  assert(index.includes('support.html'), 'нет ссылки на support.html');
-});
+check('есть конфиг счётчика', () => assert(index.includes('window.SAMOGON_CONFIG'), 'нет SAMOGON_CONFIG'));
+check('есть ссылка на страницу поддержки', () => assert(index.includes('support.html'), 'нет ссылки'));
 check('canonical на главной', () => {
   assert(index.includes('<link rel="canonical" href="' + BASE + '">'), 'нет canonical');
 });
 
-console.log('\nПосадочные страницы (' + pages.length + ')');
-pages.forEach((p) => {
-  const file = p.slug + '.html';
-  check(file + ' существует', () => {
-    assert(fs.existsSync(path.join(root, file)), 'нет файла');
+console.log('\nГруппы переводов');
+check('у каждой страницы есть пара на другом языке', () => {
+  Object.keys(byId).forEach((id) => {
+    const group = byId[id];
+    const langs = group.map((e) => e.lang.code).sort().join(',');
+    assert(langs === 'en,ru', id + ': переводы ' + langs);
   });
-  check(file + ': заголовок, canonical и один h1', () => {
+});
+check('всего 8 страниц (4 темы × 2 языка)', () => {
+  assert(entries.length === 8, 'страниц: ' + entries.length);
+});
+
+console.log('\nПосадочные страницы');
+entries.forEach((e) => {
+  const file = fileFor(e);
+  check(file, () => {
+    assert(fs.existsSync(path.join(root, file)), 'файла нет');
     const html = read(file);
-    assert(html.includes('<title>' + p.title.replace(/&/g, '&amp;') + '</title>'), 'не тот title');
+
     const canonicals = html.match(/rel="canonical"/g) || [];
-    assert(canonicals.length === 1, 'canonical-тегов: ' + canonicals.length + ' (должен быть один)');
-    assert(html.includes('rel="canonical" href="' + BASE + file + '"'), 'не тот canonical');
+    assert(canonicals.length === 1, 'canonical-тегов: ' + canonicals.length);
+    assert(html.includes('rel="canonical" href="' + urlFor(e) + '"'), 'не тот canonical');
+
     const h1 = (html.match(/<h1[\s>]/g) || []).length;
     assert(h1 === 1, 'h1 найдено: ' + h1);
+
+    assert(html.includes('<title>' + e.page.title.replace(/&/g, '&amp;') + '</title>'), 'не тот title');
     assert(html.includes('<meta name="description"'), 'нет description');
-  });
-  check(file + ': предзаполнение и JSON-LD', () => {
-    const html = read(file);
+    assert(html.includes('<html lang="' + e.lang.htmlLang + '">'), 'не тот lang у html');
+
+    // hreflang на все языки группы
+    byId[e.id].forEach((other) => {
+      assert(html.includes('hreflang="' + other.lang.htmlLang + '" href="' + urlFor(other) + '"'),
+        'нет hreflang ' + other.lang.htmlLang);
+    });
+    assert(html.includes('hreflang="x-default"'), 'нет x-default');
+
+    // переключатель языка ведёт относительной ссылкой
+    assert(html.includes('class="lang-links"'), 'нет переключателя языка');
+
+    // предзаполнение и JSON-LD
     assert(html.includes('window.SEO_PRESET'), 'нет SEO_PRESET');
     const ld = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
     assert(ld, 'нет JSON-LD');
     const data = JSON.parse(ld[1]);
     assert(data['@type'] === 'FAQPage', 'ожидался FAQPage');
-    assert(data.mainEntity.length >= 3, 'мало вопросов: ' + data.mainEntity.length);
+    assert(data.mainEntity.length >= 3, 'мало вопросов');
+
+    if (e.lang.dir) {
+      assert(html.includes('href="../assets/style.css"'), 'ассеты не переписаны на ../');
+      assert(html.includes('window.SEO_LANG = "en"'), 'нет SEO_LANG для английской страницы');
+    }
   });
 });
 
@@ -100,7 +136,7 @@ console.log('\nИндексация');
 check('sitemap.xml перечисляет все страницы', () => {
   const sm = read('sitemap.xml');
   assert(sm.includes('<loc>' + BASE + '</loc>'), 'нет главной');
-  pages.forEach((p) => assert(sm.includes(BASE + p.slug + '.html'), 'нет ' + p.slug));
+  entries.forEach((e) => assert(sm.includes(urlFor(e)), 'нет ' + fileFor(e)));
   assert(sm.includes('support.html'), 'нет support.html');
 });
 check('robots.txt указывает на sitemap', () => {
@@ -120,4 +156,4 @@ if (failed) {
   console.log('Провалено: ' + failed);
   process.exit(1);
 }
-console.log('SEO и PWA в порядке');
+console.log('SEO и PWA в порядке: ' + entries.length + ' страниц на ' + LANGS.length + ' языках');
